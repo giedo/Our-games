@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Krabbel Kart</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Draw your own racers and race them through four hand-made 3D worlds.">
+<meta name="theme-color" content="#3fb8ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Krabbel Kart">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="hud-root"></div>
+<div id="ui-root" class="ui"></div>
+<div id="overlay-root"></div>
+<div id="loading"><div class="load-card"><b>Krabbel Kart</b><i></i></div></div>
+<div id="rotate-hint"><div><svg viewBox="0 0 64 64" width="72" height="72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="20" y="6" width="24" height="40" rx="4"/><path d="M8 40c0 10 8 18 18 18M26 58l-5-6M26 58l-7 3"/></svg><p data-i18n="rotateDevice">Turn your screen sideways</p></div></div>
+<noscript>Krabbel Kart needs JavaScript.</noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

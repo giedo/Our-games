@@ -1,0 +1,157 @@
+// Heads-up display for one player: place, lap, timer, item slot, minimap,
+// messages and the on-screen touch controls.
+import { ITEMS, ITEM_ICONS } from './items.js';
+import { formatTime, clamp } from './util.js';
+import { t } from './i18n.js';
+
+const DOT_COLORS = ['#ff4b4b', '#4fb8ff', '#ffa53c', '#5fe06a', '#b46bff', '#ff7ac0', '#2fd0d0', '#c9ced8'];
+
+function el(tag, cls, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html !== undefined) e.innerHTML = html;
+  return e;
+}
+
+export class Hud {
+  constructor(game, race, kart, index, total) {
+    this.game = game; this.race = race; this.kart = kart; this.index = index;
+    const root = this.el = el('div', `hud p${index}${total > 1 ? ' split' : ''}`);
+    this.pos = el('div', 'hud-pos');
+    this.lap = el('div', 'hud-lap');
+    this.time = el('div', 'hud-time', '0:00.00');
+    this.item = el('button', 'hud-item');
+    this.item.setAttribute('aria-label', t('item'));
+    this.map = el('canvas', 'hud-map');
+    this.map.width = 280; this.map.height = 280;
+    this.msg = el('div', 'hud-msg');
+    this.wrong = el('div', 'hud-wrong', t('wrongWay'));
+    this.vig = el('div', 'hud-vig');
+    this.skip = el('div', 'hud-skip', t('tapToSkip'));
+    const col = el('div', 'hud-col');
+    col.append(this.lap, this.time);
+    const tl = el('div', 'hud-tl');
+    tl.append(this.pos, col);
+    root.append(this.vig, tl, this.map, this.msg, this.wrong, this.item, this.skip);
+    this._buildTouch(root);
+    game.hudRoot.appendChild(root);
+    this._cache = {};
+    this.msgT = 0;
+    this._buildMap();
+    this.update(0);
+  }
+
+  _buildTouch(root) {
+    const input = this.game.input, i = this.index;
+    const pad = this.pad = el('div', 'touch-steer', '<span>◀</span><span>▶</span>');
+    const drift = el('button', 'touch-btn touch-drift', t('drift'));
+    const brake = el('button', 'touch-btn touch-brake', t('brake'));
+    root.append(pad, drift, brake);
+    const steerFrom = (e) => {
+      const r = pad.getBoundingClientRect();
+      const v = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      const a = Math.abs(v);
+      input.setTouch(i, 'steer', a < 0.1 ? 0 : Math.sign(v) * clamp((a - 0.1) / 0.45, 0, 1));
+      pad.classList.toggle('l', v < -0.1); pad.classList.toggle('r', v > 0.1);
+    };
+    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); pad.setPointerCapture(e.pointerId); pad._id = e.pointerId; steerFrom(e); });
+    pad.addEventListener('pointermove', (e) => { if (pad._id === e.pointerId) steerFrom(e); });
+    const endSteer = (e) => { if (pad._id === e.pointerId) { pad._id = null; input.setTouch(i, 'steer', undefined); pad.classList.remove('l', 'r'); } };
+    pad.addEventListener('pointerup', endSteer); pad.addEventListener('pointercancel', endSteer);
+    const hold = (btn, name) => {
+      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } input.setTouch(i, name, true); btn.classList.add('down'); });
+      const off = () => { input.setTouch(i, name, false); btn.classList.remove('down'); };
+      btn.addEventListener('pointerup', off); btn.addEventListener('pointercancel', off);
+    };
+    hold(drift, 'drift'); hold(brake, 'brake');
+    this.item.addEventListener('pointerdown', (e) => { e.preventDefault(); input.touch[i].item = true; });
+    const itemOff = () => { input.touch[i].item = false; };
+    this.item.addEventListener('pointerup', itemOff); this.item.addEventListener('pointercancel', itemOff); this.item.addEventListener('pointerleave', itemOff);
+    root.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  _buildMap() {
+    const tr = this.race.world.track, b = tr.bounds, S = 280, pad = 22;
+    const sc = Math.min((S - pad * 2) / (b.maxX - b.minX), (S - pad * 2) / (b.maxZ - b.minZ));
+    this.mx = (x) => S / 2 + (x - b.cx) * sc;
+    this.my = (z) => S / 2 + (z - b.cz) * sc;
+    const off = this.mapBase = document.createElement('canvas');
+    off.width = off.height = S;
+    const g = off.getContext('2d');
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    const path = () => {
+      g.beginPath();
+      for (let i = 0; i <= tr.n; i += 2) {
+        const k = i % tr.n;
+        if (i === 0) g.moveTo(this.mx(tr.px[k]), this.my(tr.pz[k])); else g.lineTo(this.mx(tr.px[k]), this.my(tr.pz[k]));
+      }
+      g.closePath();
+    };
+    path(); g.strokeStyle = 'rgba(20,20,40,0.55)'; g.lineWidth = 17; g.stroke();
+    path(); g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 10; g.stroke();
+    // Start line tick.
+    g.strokeStyle = '#2a2433'; g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(this.mx(tr.px[0] - tr.rx[0] * 14), this.my(tr.pz[0] - tr.rz[0] * 14));
+    g.lineTo(this.mx(tr.px[0] + tr.rx[0] * 14), this.my(tr.pz[0] + tr.rz[0] * 14));
+    g.stroke();
+  }
+
+  message(text, dur, cls = '') {
+    this.msg.className = 'hud-msg';
+    void this.msg.offsetWidth; // restart the pop animation
+    this.msg.textContent = text;
+    this.msg.className = `hud-msg show ${cls}`;
+    this.msgT = dur;
+  }
+
+  _set(key, value, fn) {
+    if (this._cache[key] !== value) { this._cache[key] = value; fn(value); }
+  }
+
+  update(dt) {
+    const k = this.kart, race = this.race;
+    if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.msg.className = 'hud-msg'; }
+    const place = t('place')[k.place - 1] || String(k.place);
+    this._set('place', place, (v) => {
+      const m = /^(\d+)(.*)$/.exec(v);
+      this.pos.innerHTML = m ? `<b>${m[1]}</b><i>${m[2]}</i>` : v;
+      this.pos.dataset.p = k.place;
+    });
+    const lap = clamp(k.lap + 1, 1, race.laps);
+    this._set('lap', lap, (v) => { this.lap.innerHTML = `${t('lap')} <b>${v}</b>/${race.laps}`; });
+    this._set('time', Math.floor((k.finished ? k.finishTime : race.time) * 100), (v) => { this.time.textContent = formatTime(v / 100); });
+    let icon = '';
+    if (k.rollT > 0) icon = 'roll' + (Math.floor(race.clock / 0.09) % ITEMS.length);
+    else if (k.item) icon = k.item;
+    this._set('item', icon, (v) => {
+      const name = v.startsWith('roll') ? ITEMS[Number(v.slice(4))] : v;
+      this.item.innerHTML = name ? ITEM_ICONS[name] : '';
+      this.item.classList.toggle('ready', !!v && !v.startsWith('roll'));
+      this.item.classList.toggle('rolling', v.startsWith('roll'));
+    });
+    this._set('wrong', k.wrongWayT > 1.2 && !k.finished, (v) => this.wrong.classList.toggle('show', v));
+    this._set('boost', k.boostT > 0, (v) => this.vig.classList.toggle('show', v));
+    this._set('intro', race.state === 'intro', (v) => this.skip.classList.toggle('show', v));
+    this._set('fin', k.finished, (v) => this.el.classList.toggle('finished', v));
+    // Minimap.
+    const g = this.map.getContext('2d');
+    g.clearRect(0, 0, 280, 280);
+    g.drawImage(this.mapBase, 0, 0);
+    const karts = race.karts;
+    for (let i = karts.length - 1; i >= 0; i--) {
+      const o = karts[i];
+      const x = this.mx(o.x), y = this.my(o.z);
+      g.beginPath();
+      if (o === k) {
+        g.arc(x, y, 12, 0, 6.3); g.fillStyle = '#ffe14a'; g.fill();
+        g.lineWidth = 4; g.strokeStyle = '#2a2433'; g.stroke();
+      } else {
+        g.arc(x, y, o.human ? 10 : 7.5, 0, 6.3); g.fillStyle = o.human ? '#ffffff' : DOT_COLORS[i % DOT_COLORS.length]; g.fill();
+        g.lineWidth = 3; g.strokeStyle = '#2a2433'; g.stroke();
+      }
+    }
+  }
+
+  dispose() { this.el.remove(); }
+}

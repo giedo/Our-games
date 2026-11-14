@@ -1,0 +1,282 @@
+// Menus: title, player count, racer picker, track picker, results, pause, settings, sticker book.
+import { h, clear, ICON } from './dom.js';
+import { TRACKS } from './tracks.js';
+import { openMaker } from './editor.js';
+import { t, setLang, getLang } from './i18n.js';
+import { formatTime } from './util.js';
+import { saveSettings } from './store.js';
+
+const LOGO_COLORS = ['#ff4b4b', '#ff9a1f', '#ffd21f', '#5fd048', '#3fb8ff', '#9a5cff', '#ff7ac0'];
+const TRACK_CHIPS = {
+  meadow: 'linear-gradient(160deg,#8fd0ff 0 45%,#74c64a 45% 100%)',
+  canyon: 'linear-gradient(160deg,#5a2f8a 0 30%,#ff8a4c 30% 55%,#b5472f 55% 100%)',
+  island: 'linear-gradient(160deg,#7fd8ff 0 40%,#49e8d6 40% 62%,#f7e6ad 62% 100%)',
+  snow: 'linear-gradient(160deg,#0a1440 0 35%,#3fe0a0 35% 48%,#15357a 48% 60%,#eaf4ff 60% 100%)',
+};
+
+function thumbUrl(st) {
+  if (!st._thumb) st._thumb = st.canvas.toDataURL('image/png');
+  return st._thumb;
+}
+
+export class UI {
+  constructor(game) {
+    this.g = game;
+    this.root = game.uiRoot;
+    this.players = 1;
+    this.current = null;
+  }
+
+  click() { this.g.audio.unlock(); this.g.audio.play('click'); }
+  back() { this.g.audio.play('back'); }
+
+  btn(cls, icon, label, fn) {
+    return h('button', { class: `btn ${cls}`, onclick: () => { this.click(); fn(); } }, icon ? h('span', { html: icon }) : null, label);
+  }
+
+  show(name, data) {
+    this.current = name;
+    clear(this.root);
+    this.root.className = `ui ${name}`;
+    this[`_${name}`](data);
+  }
+
+  hide() { this.current = null; clear(this.root); this.root.className = 'ui'; }
+
+  // ---------- title ----------
+  _title() {
+    const g = this.g;
+    g.setMenuView('fly');
+    const letters = (word, off) => word.split('').map((ch, i) => h('span', { style: { color: LOGO_COLORS[(i + off) % LOGO_COLORS.length], transform: `rotate(${((i * 37 + off * 11) % 13) - 6}deg) translateY(${((i * 53) % 9) - 4}px)` } }, ch));
+    this.root.append(
+      h('div', { class: 'screen title' },
+        h('h1', { class: 'logo', 'aria-label': 'Krabbel Kart' }, h('div', null, letters('Krabbel', 0)), h('div', null, letters('Kart', 3))),
+        h('p', { class: 'tagline' }, t('tagline')),
+        h('div', { class: 'title-btns' },
+          this.btn('go xl', ICON.play, t('play'), () => this.show('players')),
+          this.btn('', ICON.pencil, t('myDrawings'), () => this.show('book')),
+          this.btn('', ICON.gear, t('settings'), () => this.show('settings'))),
+        h('p', { class: 'keys-hint' }, t('driftTip'))));
+  }
+
+  // ---------- how many players ----------
+  _players() {
+    const g = this.g;
+    g.setMenuView('fly');
+    const pick = (n) => { this.players = n; this.show('racer', 0); };
+    this.root.append(
+      h('div', { class: 'screen center' },
+        h('h2', { class: 'head' }, t('howMany')),
+        h('div', { class: 'choice-row' },
+          h('button', { class: 'card big', onclick: () => { this.click(); pick(1); } }, h('span', { class: 'ic', html: ICON.one }), h('b', null, t('players1'))),
+          h('button', { class: 'card big', onclick: () => { this.click(); pick(2); } }, h('span', { class: 'ic', html: ICON.two }), h('b', null, t('players2')))),
+        this.btn('ghost', ICON.back, t('back'), () => this.show('title'))));
+  }
+
+  // ---------- pick driver + vehicle ----------
+  _racer(i) {
+    const g = this.g, book = g.book, picks = g.settings.picks;
+    if (!picks[i]) picks[i] = {};
+    const pick = picks[i];
+    const first = (kind, skip) => {
+      const list = book.list(kind);
+      return (list.find((s) => s.builtin && s.id !== skip) || list[0]).id;
+    };
+    const other = i === 1 ? picks[0] : null;
+    if (!book.get(pick.driver)) pick.driver = first('driver', other && other.driver);
+    if (!book.get(pick.vehicle)) pick.vehicle = first('vehicle', other && other.vehicle);
+    const apply = () => {
+      saveSettings(g.settings);
+      g.setPreview(book.get(pick.driver), book.get(pick.vehicle));
+    };
+    const strip = (kind) => {
+      const row = h('div', { class: 'strip' });
+      const fill = () => {
+        clear(row);
+        row.append(h('button', { class: 'thumb new', onclick: async () => {
+          this.click();
+          const st = await openMaker(g, kind);
+          if (st) { pick[kind] = st.id; apply(); fill(); }
+        } }, h('span', { class: 'ic', html: ICON.plus }), h('small', null, t('newDrawing'))));
+        for (const st of book.list(kind)) {
+          const b = h('button', { class: `thumb${pick[kind] === st.id ? ' on' : ''}${st.builtin ? '' : ' mine'}`, onclick: () => {
+            this.click(); pick[kind] = st.id; apply();
+            for (const c of row.children) c.classList.remove('on');
+            b.classList.add('on');
+          } }, h('img', { src: thumbUrl(st), alt: st.name, draggable: false }), h('small', null, st.name));
+          row.append(b);
+        }
+      };
+      fill();
+      return row;
+    };
+    g.setMenuView('kart');
+    apply();
+    const title = this.players > 1 ? `${t('player')} ${i + 1}` : t('pickDriver');
+    this.root.append(
+      h('div', { class: 'screen racer' },
+        h('div', { class: 'bar' },
+          this.btn('ghost', ICON.back, t('back'), () => (i > 0 ? this.show('racer', i - 1) : this.show('players'))),
+          h('h2', { class: `head p${i}` }, title),
+          this.btn('go', ICON.next, t('next'), () => (i + 1 < this.players ? this.show('racer', i + 1) : this.show('track')))),
+        h('div', { class: 'racer-panel' },
+          h('div', { class: 'row' }, h('h3', null, t('drivers')), strip('driver')),
+          h('div', { class: 'row' }, h('h3', null, t('vehicles')), strip('vehicle')))));
+  }
+
+  // ---------- pick track ----------
+  _track() {
+    const g = this.g, s = g.settings;
+    g.setMenuView('fly');
+    const cards = h('div', { class: 'track-cards' });
+    const fill = () => {
+      clear(cards);
+      for (const def of TRACKS) {
+        cards.append(h('button', { class: `card track${s.track === def.id ? ' on' : ''}`, onclick: () => {
+          this.click();
+          if (s.track === def.id) return;
+          s.track = def.id; saveSettings(s); fill();
+          g.loadWorld(def.id);
+        } }, h('i', { class: 'chip', style: { background: TRACK_CHIPS[def.id] } }), h('b', null, t(`tracks.${def.id}`)), h('small', null, t(`trackSub.${def.id}`))));
+      }
+    };
+    fill();
+    const diff = h('div', { class: 'seg' });
+    const fillDiff = () => {
+      clear(diff);
+      for (const d of ['easy', 'normal', 'fast']) {
+        diff.append(h('button', { class: s.difficulty === d ? 'on' : '', onclick: () => { this.click(); s.difficulty = d; saveSettings(s); fillDiff(); } }, t(d)));
+      }
+    };
+    fillDiff();
+    this.root.append(
+      h('div', { class: 'screen trackpick' },
+        h('div', { class: 'bar' },
+          this.btn('ghost', ICON.back, t('back'), () => this.show('racer', this.players - 1)),
+          h('h2', { class: 'head' }, t('pickTrack')),
+          this.btn('go', ICON.play, t('start'), () => this.startRace())),
+        h('div', { class: 'track-bottom' }, cards, h('div', { class: 'diff' }, h('span', null, t('speed')), diff))));
+  }
+
+  startRace() {
+    const g = this.g, s = g.settings;
+    const picks = [];
+    for (let i = 0; i < this.players; i++) picks.push({ driver: g.book.get(s.picks[i].driver), vehicle: g.book.get(s.picks[i].vehicle) });
+    this.hide();
+    g.startRace({ trackId: s.track, players: picks, difficulty: s.difficulty });
+  }
+
+  // ---------- results ----------
+  _results(results) {
+    const g = this.g;
+    const list = h('ol', { class: 'res-list' });
+    for (const r of results) {
+      list.append(h('li', { class: r.human ? `me p${r.playerIndex}` : '' },
+        h('span', { class: 'pl' }, String(r.place)),
+        h('img', { src: thumbUrl(r.driver), alt: '' }),
+        h('span', { class: 'nm' }, r.name),
+        h('span', { class: 'tm' }, r.time === null ? '' : formatTime(r.time))));
+    }
+    this.root.append(
+      h('div', { class: 'screen center' },
+        h('div', { class: 'panel results' },
+          h('h2', null, t('results')), list,
+          h('div', { class: 'btn-row' },
+            this.btn('go', ICON.rotate, t('again'), () => { this.hide(); g.restartRace(); }),
+            this.btn('', ICON.wheel, t('otherTrack'), () => { g.endRace(); this.show('track'); }),
+            this.btn('ghost', ICON.close, t('menu'), () => { g.endRace(); this.show('title'); })))));
+  }
+
+  // ---------- pause ----------
+  _pause() {
+    const g = this.g;
+    this.root.append(
+      h('div', { class: 'screen center dim' },
+        h('div', { class: 'panel' },
+          h('h2', null, t('paused')),
+          h('div', { class: 'btn-col' },
+            this.btn('go', ICON.play, t('resume'), () => g.setPaused(false)),
+            this.btn('', ICON.rotate, t('restart'), () => { g.setPaused(false); this.hide(); g.restartRace(); }),
+            this.btn('ghost', ICON.close, t('quit'), () => { g.setPaused(false); g.endRace(); this.show('title'); })),
+          this.toggles(false))));
+  }
+
+  toggles(full) {
+    const g = this.g, s = g.settings;
+    const box = h('div', { class: 'toggles' });
+    const fill = () => {
+      clear(box);
+      const tog = (icon, label, key, hint) => h('button', { class: `toggle${s[key] ? ' on' : ''}`, onclick: () => {
+        s[key] = !s[key]; saveSettings(s); g.audio.unlock(); g.audio.applySettings(); g.audio.play('click'); fill();
+      } }, h('span', { class: 'ic', html: icon }), h('span', { class: 'lb' }, label, hint ? h('small', null, hint) : null), h('i', null, s[key] ? t('on') : t('off')));
+      box.append(tog(ICON.sound, t('sound'), 'sound'), tog(ICON.music, t('music'), 'music'));
+      if (full) {
+        box.append(tog(ICON.wheel, t('steerHelp'), 'assist', t('steerHelpHint')));
+        box.append(h('button', { class: 'toggle', onclick: () => {
+          s.lang = getLang() === 'nl' ? 'en' : 'nl'; setLang(s.lang); saveSettings(s); g.audio.play('click'); this.show('settings');
+        } }, h('span', { class: 'ic', html: ICON.globe }), h('span', { class: 'lb' }, t('language')), h('i', null, getLang() === 'nl' ? 'Nederlands' : 'English')));
+      }
+    };
+    fill();
+    return box;
+  }
+
+  // ---------- settings ----------
+  _settings() {
+    this.g.setMenuView('fly');
+    this.root.append(
+      h('div', { class: 'screen center' },
+        h('div', { class: 'panel' },
+          h('h2', null, t('settings')),
+          this.toggles(true),
+          h('div', { class: 'help' }, h('b', null, t('keysTitle')), h('p', null, t('keys1')), h('p', null, t('keys2')), h('p', null, t('keysPad'))),
+          h('div', { class: 'btn-row' }, this.btn('go', ICON.check, t('done'), () => this.show('title'))))));
+  }
+
+  // ---------- sticker book ----------
+  _book() {
+    const g = this.g, book = g.book;
+    g.setMenuView('fly');
+    const section = (kind) => {
+      const grid = h('div', { class: 'grid' });
+      grid.append(h('button', { class: 'thumb new', onclick: async () => {
+        this.click();
+        const st = await openMaker(g, kind);
+        if (st) this.show('book');
+      } }, h('span', { class: 'ic', html: ICON.plus }), h('small', null, t(kind === 'driver' ? 'newDriver' : 'newVehicle'))));
+      for (const st of book.custom.filter((s) => s.kind === kind)) {
+        grid.append(h('button', { class: 'thumb mine', onclick: () => { this.click(); this.detail(st); } }, h('img', { src: thumbUrl(st), alt: st.name, draggable: false }), h('small', null, st.name)));
+      }
+      return h('div', { class: 'book-sec' }, h('h3', null, t(kind === 'driver' ? 'drivers' : 'vehicles')), grid);
+    };
+    this.root.append(
+      h('div', { class: 'screen center' },
+        h('div', { class: 'panel wide' },
+          h('h2', null, t('myDrawings')),
+          book.custom.length ? null : h('p', { class: 'tip' }, t('emptyBook')),
+          section('driver'), section('vehicle'),
+          h('div', { class: 'btn-row' }, this.btn('go', ICON.check, t('done'), () => this.show('title'))))));
+  }
+
+  detail(st) {
+    const g = this.g;
+    // Downloads are blocked inside some embedded viewers; the single-page share build hides the button.
+    const canDownload = typeof KK_NO_DOWNLOAD === 'undefined';
+    let armed = false;
+    const del = h('button', { class: 'btn danger', onclick: async () => {
+      this.click();
+      if (!armed) { armed = true; del.lastChild.textContent = t('deleteAsk'); return; }
+      await g.book.remove(st.id);
+      pop.remove(); this.show('book');
+    } }, h('span', { html: ICON.trash }), t('delete'));
+    const pop = h('div', { class: 'screen center dim pop' },
+      h('div', { class: 'panel' },
+        h('h2', null, st.name),
+        h('img', { class: 'big-sticker', src: thumbUrl(st), alt: st.name }),
+        h('div', { class: 'btn-row' },
+          canDownload ? h('a', { class: 'btn', href: thumbUrl(st), download: `${st.name}.png`, onclick: () => this.click() }, h('span', { html: ICON.download }), t('exportPng')) : null,
+          del,
+          this.btn('ghost', ICON.close, t('back'), () => pop.remove()))));
+    this.root.append(pop);
+  }
+}
