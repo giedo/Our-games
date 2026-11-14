@@ -84,7 +84,7 @@ export class GameAudio {
       this.master = c.createDynamicsCompressor();
       this.master.connect(c.destination);
       this.sfxGain = c.createGain(); this.sfxGain.gain.value = 0.55; this.sfxGain.connect(this.master);
-      this.musicGain = c.createGain(); this.musicGain.gain.value = 0.2; this.musicGain.connect(this.master);
+      this.musicGain = c.createGain(); this.musicGain.gain.value = 0.28; this.musicGain.connect(this.master);
       this.engGain = c.createGain(); this.engGain.gain.value = 1; this.engGain.connect(this.master);
       const len = c.sampleRate;
       this.noiseBuf = c.createBuffer(1, len, c.sampleRate);
@@ -92,12 +92,12 @@ export class GameAudio {
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       if (this.pendingSong) { const id = this.pendingSong; this.pendingSong = null; this.startMusic(id); }
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state === 'suspended') { const p = this.ctx.resume(); if (p && p.catch) p.catch(() => {}); }
   }
 
   applySettings() {
     if (!this.ctx) return;
-    this.musicGain.gain.value = this.settings.music ? 0.2 : 0;
+    this.musicGain.gain.value = this.settings.music ? 0.28 : 0;
     this.sfxGain.gain.value = this.settings.sound ? 0.55 : 0;
     this.engGain.gain.value = this.settings.sound ? 1 : 0;
   }
