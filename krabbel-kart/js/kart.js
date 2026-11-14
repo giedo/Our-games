@@ -1,5 +1,5 @@
 // One racer: arcade driving physics, drifting, AI driving and the 3D model.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { clamp, lerp, damp, angleDiff } from './util.js';
 import { buildRacerModel, disposeRacerModel } from './racerModel.js';
 
@@ -312,7 +312,7 @@ export class Kart {
         P.emit(true, i ? 0xffd24a : 0xff7a1f, {
           x: bx + (Math.random() - 0.5) * 0.6, y: by + 0.3 + Math.random() * 0.3, z: bz + (Math.random() - 0.5) * 0.6,
           vx: -fx * 6 + (Math.random() - 0.5) * 2, vy: 1 + Math.random() * 2, vz: -fz * 6 + (Math.random() - 0.5) * 2,
-          life: 0.32, size: 1.1, size1: 0.1, a: 0.85,
+          life: 0.3, size: 0.8, size1: 0.1, a: 0.8,
         });
       }
     }
@@ -366,7 +366,7 @@ export class Kart {
       const pulse = 1 + Math.sin(time * 6) * 0.04;
       sh.scale.set(1.9 * pulse, 1.7 * pulse, 2.2 * pulse);
       sh.rotation.y = time * 0.8;
-      sh.material.opacity = this.shieldT < 2 ? 0.14 + 0.14 * Math.abs(Math.sin(time * 12)) : 0.28;
+      sh.material.uniforms.uOpacity.value = this.shieldT < 2 ? 0.45 + 0.55 * Math.abs(Math.sin(time * 12)) : 1;
     }
     const sd = m.shadow, air = clamp(this.y - this.prevG, 0, 6);
     sd.position.set(this.x, this.prevG + 0.06, this.z);

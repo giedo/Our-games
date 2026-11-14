@@ -1,5 +1,5 @@
 // Builds one complete race world: terrain, road, sky, water, clouds and scenery.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { Track } from './tracks.js';
 import { makeTheme } from './themes.js';
 import { buildScenery } from './scenery.js';

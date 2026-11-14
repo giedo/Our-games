@@ -1,5 +1,5 @@
 // Look + landscape recipe for every track: sky, light, terrain shape and colours.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { makeNoise, smoothstep, clamp } from './util.js';
 
 const C = (hex) => new THREE.Color(hex);
@@ -60,7 +60,7 @@ export function makeTheme(id, seed, bounds) {
       fog: { color: 0xffa868, near: 120, far: 900 },
       light: { sun: 0xffb070, sunI: 3.0, sky: 0xb48cff, ground: 0xd9703a, hemiI: 1.25 },
       water: { level: -2.0, shallow: 0x59e0c8, deep: 0x1d7f9a, foam: 0xfff2d8, ice: 0 },
-      road: { tint: 0x8a6a5c, line: '#ffe9c0', curbA: '#ff8a1f', curbB: '#fff3d6', shoulder: 0xe0965a },
+      road: { tint: 0xa98676, line: '#fff0d0', curbA: '#ff8a1f', curbB: '#fff3d6', shoulder: 0xe0965a },
       clouds: { color: 0xffc7a0, count: 16, minY: 170, maxY: 260 },
       ambient: { kind: 'dust', color: 0xffd9a0 },
       blendNear: 8, blendFar: 46,

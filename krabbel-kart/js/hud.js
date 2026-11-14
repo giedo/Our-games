@@ -54,7 +54,7 @@ export class Hud {
       input.setTouch(i, 'steer', a < 0.1 ? 0 : Math.sign(v) * clamp((a - 0.1) / 0.45, 0, 1));
       pad.classList.toggle('l', v < -0.1); pad.classList.toggle('r', v > 0.1);
     };
-    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); pad.setPointerCapture(e.pointerId); pad._id = e.pointerId; steerFrom(e); });
+    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ } pad._id = e.pointerId; steerFrom(e); });
     pad.addEventListener('pointermove', (e) => { if (pad._id === e.pointerId) steerFrom(e); });
     const endSteer = (e) => { if (pad._id === e.pointerId) { pad._id = null; input.setTouch(i, 'steer', undefined); pad.classList.remove('l', 'r'); } };
     pad.addEventListener('pointerup', endSteer); pad.addEventListener('pointercancel', endSteer);
@@ -64,7 +64,7 @@ export class Hud {
       btn.addEventListener('pointerup', off); btn.addEventListener('pointercancel', off);
     };
     hold(drift, 'drift'); hold(brake, 'brake');
-    this.item.addEventListener('pointerdown', (e) => { e.preventDefault(); input.touch[i].item = true; });
+    this.item.addEventListener('pointerdown', (e) => { e.preventDefault(); input.touch[i].item = true; input.touch[i].itemTap = true; });
     const itemOff = () => { input.touch[i].item = false; };
     this.item.addEventListener('pointerup', itemOff); this.item.addEventListener('pointercancel', itemOff); this.item.addEventListener('pointerleave', itemOff);
     root.addEventListener('contextmenu', (e) => e.preventDefault());

@@ -1,5 +1,5 @@
 // A single race: grid, countdown, laps, positions, cameras and the finish.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { Kart, DIFFICULTY, BASE_MAX } from './kart.js';
 import { ItemSystem } from './items.js';
 import { Particles } from './particles.js';

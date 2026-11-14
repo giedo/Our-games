@@ -1,5 +1,5 @@
 // Track layouts + the Track class (a closed spline sampled every ~2 metres).
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { angleDiff, clamp } from './util.js';
 
 // Control points are [x, z, height]. The first point sits in the middle of the

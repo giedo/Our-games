@@ -1,6 +1,6 @@
 // Assembles a racer: a 3D vehicle made from a side-view drawing, with a
 // puffy 3D driver made from a front-view drawing sitting on top.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { buildPuffy } from './puffy.js';
 import { makeCanvas, canvasTexture } from './util.js';
 
@@ -80,8 +80,21 @@ export function buildRacerModel(driver, vehicle) {
   pivot.position.set(0, Math.max(0.12, seatY - driverH * 0.3), (0.44 - 0.5) * len);
   body.add(pivot);
 
-  if (!shieldGeo) shieldGeo = new THREE.IcosahedronGeometry(1, 2);
-  const shield = new THREE.Mesh(shieldGeo, new THREE.MeshBasicMaterial({ color: 0x8fe9ff, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending }));
+  if (!shieldGeo) shieldGeo = new THREE.IcosahedronGeometry(1, 4);
+  // Soap-bubble look: clear in the middle, bright towards the rim.
+  const shield = new THREE.Mesh(shieldGeo, new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(0x7fe4ff) }, uOpacity: { value: 1 } },
+    vertexShader: `varying vec3 vN; varying vec3 vV;
+      void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform vec3 uColor; uniform float uOpacity; varying vec3 vN; varying vec3 vV;
+      void main() {
+        float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+        float a = (0.07 + pow(f, 2.4) * 0.85) * uOpacity;
+        gl_FragColor = vec4(mix(uColor, vec3(1.0), pow(f, 5.0)), a);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false,
+  }));
   shield.scale.set(1.9, 1.7, 2.2);
   shield.position.y = 1.25;
   shield.visible = false;

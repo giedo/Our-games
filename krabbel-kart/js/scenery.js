@@ -1,5 +1,5 @@
 // Low-poly scenery: trees, windmills, tulip fields, rock arches, igloos and friends.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { mergeColored, mat4, lerp, TAU, makeCanvas, canvasTexture, clamp } from './util.js';
 
 const V3 = THREE.Vector3;

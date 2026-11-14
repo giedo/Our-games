@@ -1,5 +1,5 @@
 // Item boxes and the four power-ups: turbo crayon, paint puddle, paper plane, bubble shield.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { makeCanvas, canvasTexture, TAU, mulberry32 } from './util.js';
 
 export const ITEMS = ['turbo', 'puddle', 'plane', 'shield'];

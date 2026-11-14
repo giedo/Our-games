@@ -1,5 +1,5 @@
 // A small pooled particle system (dust, sparks, flames, confetti, splashes).
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 
 const VERT = /* glsl */ `
 attribute vec4 aColor;

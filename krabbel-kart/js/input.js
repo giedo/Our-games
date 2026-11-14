@@ -15,6 +15,7 @@ const KEYS_P2 = {
 export class Input {
   constructor() {
     this.down = new Set();
+    this.pressed = new Set(); // keys that went down since the last frame (catches very quick taps)
     this.touch = [{}, {}];
     this.device = ['keys', 'keys']; // last device used per player
     this.steer = [0, 0];
@@ -26,7 +27,7 @@ export class Input {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
       if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
       if (!this.down.has(e.code)) {
-        this.down.add(e.code);
+        this.down.add(e.code); this.pressed.add(e.code);
         for (const f of this.anyKeyListeners) f(e.code);
       }
       this.touchMode = false;
@@ -46,8 +47,14 @@ export class Input {
   clearTouch() { this.touch = [{}, {}]; }
 
   _key(map, name) {
-    for (const k of map[name]) if (this.down.has(k)) return true;
+    for (const k of map[name]) if (this.down.has(k) || this.pressed.has(k)) return true;
     return false;
+  }
+
+  // Call once per frame after all players have been read.
+  endFrame() {
+    this.pressed.clear();
+    for (const t of this.touch) t.itemTap = false;
   }
 
   _pad(index) {
@@ -87,7 +94,7 @@ export class Input {
     if (t.steer !== undefined && t.steer !== 0) analog = t.steer;
     if (t.brake) brake = 1;
     if (t.drift) drift = true;
-    if (t.item) item = true;
+    if (t.item || t.itemTap) item = true;
     if (this.device[player] === 'touch') gas = brake ? 0 : 1; // touch players accelerate automatically
     // Smooth digital steering so taps give small corrections and holds give full lock.
     const target = analog || (right ? 1 : 0) - (left ? 1 : 0);

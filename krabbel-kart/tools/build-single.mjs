@@ -20,7 +20,6 @@ const js = await build({
   minify: true,
   write: false,
   target: 'es2020',
-  alias: { three: join(root, 'vendor/three.module.min.js') },
   define: embed ? { KK_NO_DOWNLOAD: 'true' } : {},
   legalComments: 'none',
   logLevel: 'warning',

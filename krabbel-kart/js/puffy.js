@@ -3,7 +3,7 @@
 //  - 'slab' mode extrudes it into a chunky toy with rounded edges (used for vehicles).
 // The outline is traced with marching squares, so the mesh is watertight and
 // the drawing is printed on both sides.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { makeCanvas, canvasTexture } from './util.js';
 
 function distanceTransform(mask, w, h) {

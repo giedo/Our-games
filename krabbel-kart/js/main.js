@@ -1,5 +1,5 @@
 // Krabbel Kart: boots the game, owns the render loop and glues everything together.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js';
 import { trackById } from './tracks.js';
 import { World } from './world.js';
 import { Race } from './race.js';
@@ -249,6 +249,7 @@ class Game {
       w.update(dt);
       this.updateMenu(dt);
     }
+    this.input.endFrame();
     if (!this.noRender) this.render();
     // Drop the render resolution a notch if this device struggles.
     if (!this.fixedQuality) {
