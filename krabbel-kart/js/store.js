@@ -91,7 +91,7 @@ export class StickerBook {
   }
 }
 
-const DEFAULTS = { sound: true, music: true, assist: false, lang: null, difficulty: 'normal', track: 'meadow', picks: [{}, {}] };
+const DEFAULTS = { sound: true, music: true, assist: false, fancy: true, lang: null, difficulty: 'normal', track: 'meadow', mode: 'single', picks: [{}, {}] };
 
 export function loadSettings() {
   let s = {};

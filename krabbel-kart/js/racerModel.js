@@ -65,6 +65,7 @@ export function buildRacerModel(driver, vehicle) {
     vm.scale.setScalar(pv.scale);
     vm.rotation.y = -Math.PI / 2; // drawing's right-hand side becomes "forward"
     vm.position.y = 0.05;
+    vm.castShadow = true;
     body.add(vm);
     len = pv.wn * pv.scale;
     seatY = pv.top(0.44) * pv.scale + 0.05;
@@ -75,6 +76,7 @@ export function buildRacerModel(driver, vehicle) {
     driverH = pd.hn * pd.scale;
     const dm = new THREE.Mesh(pd.geometry, pd.faceMat);
     dm.scale.setScalar(pd.scale);
+    dm.castShadow = true;
     pivot.add(dm);
   }
   pivot.position.set(0, Math.max(0.12, seatY - driverH * 0.3), (0.44 - 0.5) * len);
@@ -102,7 +104,7 @@ export function buildRacerModel(driver, vehicle) {
   body.add(shield);
 
   const sg = new THREE.PlaneGeometry(1, 1); sg.rotateX(-Math.PI / 2);
-  const shadow = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 }));
+  const shadow = new THREE.Mesh(sg, new THREE.MeshBasicMaterial({ map: blobShadowTexture(), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -8, polygonOffsetUnits: -8 }));
   shadow.scale.set(2.6, 1, len + 1.2);
   shadow.renderOrder = 0.7;
 

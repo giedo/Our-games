@@ -94,6 +94,7 @@ export class Race {
     this.bumpCool = 0;
     for (let i = 0; i < this.humans.length; i++) game.input.device[i] = game.input.touchMode ? 'touch' : 'keys';
     this.rank();
+    if (cfg.label) for (const h of this.huds) h.message(cfg.label, 2.4);
     game.audio.startMusic(world.def.id);
   }
 
@@ -210,6 +211,7 @@ export class Race {
         else if (this.state === 'racing' && this.stateT < (k.startDelay || 0) && this.time < 1) ctl.gas = 0;
       }
       if (ctl.item && this.state === 'racing') this.items.use(k);
+      k.gasNow = ctl.gas; // the engine sound listens to the pedal
       k.update(dt, ctl);
     }
 
@@ -234,7 +236,7 @@ export class Race {
     this.particles.update(dt);
     for (const c of this.cams) c.update(dt, this);
     for (const h of this.huds) h.update(dt);
-    game.audio.engine(this.humans, this.state === 'racing' || this.state === 'ending');
+    game.audio.engine(this.humans, this.state);
 
     // All players home? Let the scene breathe, then show the results.
     if (this.state === 'racing') {
@@ -252,7 +254,7 @@ export class Race {
     this.rank();
     return this.sorted.map((k) => ({
       place: k.place, name: k.name, human: k.human, playerIndex: k.playerIndex,
-      time: k.finished ? k.finishTime : null, driver: k.driver,
+      time: k.finished ? k.finishTime : null, driver: k.driver, index: this.karts.indexOf(k),
     }));
   }
 
@@ -261,6 +263,6 @@ export class Race {
     this.items.dispose();
     this.particles.dispose();
     for (const k of this.karts) k.dispose();
-    this.game.audio.engine([], false);
+    this.game.audio.engine([], null);
   }
 }

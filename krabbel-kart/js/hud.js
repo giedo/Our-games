@@ -129,6 +129,7 @@ export class Hud {
       this.item.innerHTML = name ? ITEM_ICONS[name] : '';
       this.item.classList.toggle('ready', !!v && !v.startsWith('roll'));
       this.item.classList.toggle('rolling', v.startsWith('roll'));
+      if (v.startsWith('roll')) this.game.audio.play('tick', 0.6);
     });
     this._set('wrong', k.wrongWayT > 1.2 && !k.finished, (v) => this.wrong.classList.toggle('show', v));
     this._set('boost', k.boostT > 0, (v) => this.vig.classList.toggle('show', v));

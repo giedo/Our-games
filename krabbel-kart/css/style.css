@@ -135,6 +135,13 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 .seg button.on { background: var(--go); }
 .seg button + button { border-left: 3px solid var(--ink); }
 
+.track-bottom .opts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; }
+.cup-hint { min-height: 1.3em; font-weight: 600; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-align: center; }
+.card.track .chip { position: relative; }
+.card.track .chip em { position: absolute; left: -9px; top: -11px; width: 34px; height: 34px; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 20px; background: var(--go); border: 3px solid var(--ink); border-radius: 50%; }
+.track-cards.cup .card.track { background: #fff; transform: none; box-shadow: 0 5px 0 var(--ink); }
+.track-cards.cup .card.track.on { background: #fff3b8; }
+
 /* results */
 .res-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .res-list li { display: flex; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 3px 12px 3px 6px; font-weight: 600; font-size: clamp(15px, 2.6vh, 19px); }
@@ -145,6 +152,23 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 .res-list img { width: clamp(26px, 5vh, 40px); height: clamp(26px, 5vh, 40px); object-fit: contain; }
 .res-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .res-list .tm { font-variant-numeric: tabular-nums; opacity: .8; }
+.res-list .pt { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: #1f8f3a; }
+.res-list .pt.big { min-width: 70px; color: var(--ink); }
+
+/* podium ceremony */
+.ceremony { justify-content: space-between; align-items: center; pointer-events: none; }
+.ceremony > * { pointer-events: auto; }
+.cer-head { text-align: center; }
+.head.champion { color: var(--go); font-size: clamp(30px, 7vh, 60px); animation: pop .6s cubic-bezier(.2, 1.6, .4, 1); }
+.cer-name { font-size: clamp(22px, 4.6vh, 38px); font-weight: 700; color: #fff; -webkit-text-stroke: 6px var(--ink); paint-order: stroke fill; }
+.cer-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.cer-top3 { display: flex; gap: clamp(6px, 1.4vw, 14px); justify-content: center; flex-wrap: wrap; }
+.medal { display: flex; align-items: center; gap: 8px; background: #fff; border: 4px solid var(--ink); border-radius: 999px; padding: 3px 14px 3px 4px; font-weight: 700; box-shadow: 0 4px 0 var(--ink); font-size: clamp(14px, 2.6vh, 19px); }
+.medal .pl { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; border: 3px solid var(--ink); }
+.medal.gold .pl { background: #ffcf33; } .medal.silver .pl { background: #dfe7f0; } .medal.bronze .pl { background: #e8a56a; }
+.medal.me { background: var(--go); }
+.medal img { width: clamp(26px, 5vh, 38px); height: clamp(26px, 5vh, 38px); object-fit: contain; }
+.medal .pt { opacity: .75; font-variant-numeric: tabular-nums; }
 
 /* toggles + help */
 .toggles { display: flex; flex-direction: column; gap: 8px; }
@@ -285,7 +309,8 @@ body.touch .hud-item.ready { animation: wiggle2 .5s ease-in-out infinite alterna
 @keyframes spin { to { transform: rotate(360deg); } }
 #rotate-hint { position: fixed; inset: 0; display: none; place-items: center; text-align: center; background: rgba(30, 24, 60, .88); color: #fff; z-index: 60; font-size: 24px; font-weight: 600; }
 #rotate-hint svg { margin: 0 auto 12px; }
-body.portrait.touch #rotate-hint { display: grid; }
+body.portrait.touch:not(.portrait-ok) #rotate-hint { display: grid; }
+#rotate-hint .btn { margin-top: 18px; }
 
 /* narrow windows */
 @media (max-width: 600px) {

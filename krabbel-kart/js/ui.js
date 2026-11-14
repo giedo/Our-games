@@ -128,34 +128,46 @@ export class UI {
   _track() {
     const g = this.g, s = g.settings;
     g.setMenuView('fly');
+    const cup = () => s.mode === 'cup';
     const cards = h('div', { class: 'track-cards' });
     const fill = () => {
       clear(cards);
-      for (const def of TRACKS) {
+      cards.classList.toggle('cup', cup());
+      TRACKS.forEach((def, i) => {
         cards.append(h('button', { class: `card track${s.track === def.id ? ' on' : ''}`, onclick: () => {
           this.click();
           if (s.track === def.id) return;
           s.track = def.id; saveSettings(s); fill();
           g.loadWorld(def.id);
-        } }, h('i', { class: 'chip', style: { background: TRACK_CHIPS[def.id] } }), h('b', null, t(`tracks.${def.id}`)), h('small', null, t(`trackSub.${def.id}`))));
-      }
+        } }, h('i', { class: 'chip', style: { background: TRACK_CHIPS[def.id] } }, cup() ? h('em', null, String(i + 1)) : null),
+        h('b', null, t(`tracks.${def.id}`)), h('small', null, t(`trackSub.${def.id}`))));
+      });
     };
-    fill();
-    const diff = h('div', { class: 'seg' });
-    const fillDiff = () => {
-      clear(diff);
-      for (const d of ['easy', 'normal', 'fast']) {
-        diff.append(h('button', { class: s.difficulty === d ? 'on' : '', onclick: () => { this.click(); s.difficulty = d; saveSettings(s); fillDiff(); } }, t(d)));
-      }
+    const seg = (options, get, set) => {
+      const box = h('div', { class: 'seg' });
+      const paint = () => {
+        clear(box);
+        for (const [value, label] of options) {
+          box.append(h('button', { class: get() === value ? 'on' : '', onclick: () => { this.click(); set(value); saveSettings(s); paint(); } }, label));
+        }
+      };
+      paint();
+      return box;
     };
-    fillDiff();
+    const hint = h('p', { class: 'cup-hint' });
+    const title = h('h2', { class: 'head' });
+    const paintMode = () => { hint.textContent = cup() ? t('cupSub') : ''; title.textContent = cup() ? t('tournament') : t('pickTrack'); fill(); };
+    const mode = seg([['single', t('singleRace')], ['cup', t('tournament')]], () => s.mode || 'single', (v) => { s.mode = v; paintMode(); });
+    const diff = seg([['easy', t('easy')], ['normal', t('normal')], ['fast', t('fast')]], () => s.difficulty, (v) => { s.difficulty = v; });
+    paintMode();
     this.root.append(
       h('div', { class: 'screen trackpick' },
         h('div', { class: 'bar' },
           this.btn('ghost', ICON.back, t('back'), () => this.show('racer', this.players - 1)),
-          h('h2', { class: 'head' }, t('pickTrack')),
+          title,
           this.btn('go', ICON.play, t('start'), () => this.startRace())),
-        h('div', { class: 'track-bottom' }, cards, h('div', { class: 'diff' }, h('span', null, t('speed')), diff))));
+        h('div', { class: 'track-bottom' }, hint, cards,
+          h('div', { class: 'opts' }, mode, h('div', { class: 'diff' }, h('span', null, t('speed')), diff)))));
   }
 
   startRace() {
@@ -163,11 +175,12 @@ export class UI {
     const picks = [];
     for (let i = 0; i < this.players; i++) picks.push({ driver: g.book.get(s.picks[i].driver), vehicle: g.book.get(s.picks[i].vehicle) });
     this.hide();
-    g.startRace({ trackId: s.track, players: picks, difficulty: s.difficulty });
+    if (s.mode === 'cup') g.startCup({ players: picks, difficulty: s.difficulty });
+    else { g.cup = null; g.startRace({ trackId: s.track, players: picks, difficulty: s.difficulty }); }
   }
 
   // ---------- results ----------
-  _results(results) {
+  _results({ results, cup }) {
     const g = this.g;
     const list = h('ol', { class: 'res-list' });
     for (const r of results) {
@@ -175,16 +188,72 @@ export class UI {
         h('span', { class: 'pl' }, String(r.place)),
         h('img', { src: thumbUrl(r.driver), alt: '' }),
         h('span', { class: 'nm' }, r.name),
-        h('span', { class: 'tm' }, r.time === null ? '' : formatTime(r.time))));
+        h('span', { class: 'tm' }, r.time === null ? '' : formatTime(r.time)),
+        cup ? h('span', { class: 'pt' }, `+${r.points}`) : null));
     }
+    const head = cup ? `${t('race')} ${cup.index + 1}/${cup.tracks.length}` : t('results');
+    const buttons = cup
+      ? [this.btn('go', ICON.next, t('standings'), () => this.show('standings'))]
+      : [this.btn('go', ICON.rotate, t('again'), () => { this.hide(); g.restartRace(); }),
+        this.btn('', ICON.wheel, t('otherTrack'), () => { g.endRace(); this.show('track'); }),
+        this.btn('ghost', ICON.close, t('menu'), () => { g.quitToMenu(); this.show('title'); })];
+    this.root.append(
+      h('div', { class: 'screen center' },
+        h('div', { class: 'panel results' }, h('h2', null, head), list, h('div', { class: 'btn-row' }, buttons))));
+  }
+
+  standingsList(ranking) {
+    const list = h('ol', { class: 'res-list' });
+    ranking.forEach((e, i) => {
+      list.append(h('li', { class: e.human ? `me p${e.playerIndex}` : '' },
+        h('span', { class: 'pl' }, String(i + 1)),
+        h('img', { src: thumbUrl(e.driver), alt: '' }),
+        h('span', { class: 'nm' }, e.name),
+        h('span', { class: 'pt big' }, `${e.points} ${t('pts')}`)));
+    });
+    return list;
+  }
+
+  // ---------- tournament standings ----------
+  _standings() {
+    const g = this.g, cup = g.cup;
+    const last = cup.index + 1 >= cup.tracks.length;
+    const nextName = last ? '' : t(`tracks.${cup.tracks[cup.index + 1]}`);
     this.root.append(
       h('div', { class: 'screen center' },
         h('div', { class: 'panel results' },
-          h('h2', null, t('results')), list,
+          h('h2', null, `${t('standings')} ${cup.index + 1}/${cup.tracks.length}`),
+          this.standingsList(g.cupStandings()),
+          last ? null : h('p', { class: 'tip' }, `${t('nextRace')}: ${nextName}`),
           h('div', { class: 'btn-row' },
-            this.btn('go', ICON.rotate, t('again'), () => { this.hide(); g.restartRace(); }),
-            this.btn('', ICON.wheel, t('otherTrack'), () => { g.endRace(); this.show('track'); }),
-            this.btn('ghost', ICON.close, t('menu'), () => { g.endRace(); this.show('title'); })))));
+            this.btn('go', last ? ICON.check : ICON.play, last ? t('toPodium') : t('nextRace'), () => { this.hide(); g.nextCupRace(); }),
+            this.btn('ghost', ICON.close, t('menu'), () => { g.quitToMenu(); this.show('title'); })))));
+  }
+
+  // ---------- podium ceremony ----------
+  _ceremony(ranking) {
+    const g = this.g;
+    const medals = ['gold', 'silver', 'bronze'];
+    const top3 = h('div', { class: 'cer-top3' }, ranking.slice(0, 3).map((e, i) => h('div', { class: `medal ${medals[i]}${e.human ? ' me' : ''}` },
+      h('span', { class: 'pl' }, String(i + 1)), h('img', { src: thumbUrl(e.driver), alt: '' }),
+      h('span', { class: 'nm' }, e.name), h('span', { class: 'pt' }, `${e.points} ${t('pts')}`))));
+    const showTable = () => {
+      const pop = h('div', { class: 'screen center dim pop' },
+        h('div', { class: 'panel results' }, h('h2', null, t('standings')), this.standingsList(ranking),
+          h('div', { class: 'btn-row' }, this.btn('go', ICON.check, t('done'), () => pop.remove()))));
+      this.root.append(pop);
+    };
+    this.root.append(
+      h('div', { class: 'screen ceremony' },
+        h('div', { class: 'cer-head' }, h('h2', { class: 'head champion' }, t('champion')), h('div', { class: 'cer-name' }, ranking[0].name)),
+        h('div', { class: 'cer-bottom' }, top3,
+          h('div', { class: 'btn-row' },
+            this.btn('', ICON.wheel, t('standings'), showTable),
+            this.btn('go', ICON.rotate, t('newTournament'), () => {
+              const players = g.cup.players, difficulty = g.cup.difficulty;
+              this.hide(); g.startCup({ players, difficulty });
+            }),
+            this.btn('ghost', ICON.close, t('menu'), () => { g.quitToMenu(); this.show('title'); })))));
   }
 
   // ---------- pause ----------
@@ -197,7 +266,7 @@ export class UI {
           h('div', { class: 'btn-col' },
             this.btn('go', ICON.play, t('resume'), () => g.setPaused(false)),
             this.btn('', ICON.rotate, t('restart'), () => { g.setPaused(false); this.hide(); g.restartRace(); }),
-            this.btn('ghost', ICON.close, t('quit'), () => { g.setPaused(false); g.endRace(); this.show('title'); })),
+            this.btn('ghost', ICON.close, t('quit'), () => { g.setPaused(false); g.quitToMenu(); this.show('title'); })),
           this.toggles(false))));
   }
 
@@ -207,13 +276,14 @@ export class UI {
     const fill = () => {
       clear(box);
       const tog = (icon, label, key, hint) => h('button', { class: `toggle${s[key] ? ' on' : ''}`, onclick: () => {
-        s[key] = !s[key]; saveSettings(s); g.audio.unlock(); g.audio.applySettings(); g.audio.play('click'); fill();
+        s[key] = !s[key]; saveSettings(s); g.audio.unlock(); g.audio.applySettings(); g.audio.play('click'); g.lowGraphics = false; g.applyGraphics(); fill();
       } }, h('span', { class: 'ic', html: icon }), h('span', { class: 'lb' }, label, hint ? h('small', null, hint) : null), h('i', null, s[key] ? t('on') : t('off')));
       box.append(tog(ICON.sound, t('sound'), 'sound'), tog(ICON.music, t('music'), 'music'));
       if (full) {
         box.append(tog(ICON.wheel, t('steerHelp'), 'assist', t('steerHelpHint')));
+        box.append(tog(ICON.brush, t('fancy'), 'fancy', t('fancyHint')));
         box.append(h('button', { class: 'toggle', onclick: () => {
-          s.lang = getLang() === 'nl' ? 'en' : 'nl'; setLang(s.lang); saveSettings(s); g.audio.play('click'); this.show('settings');
+          s.lang = getLang() === 'nl' ? 'en' : 'nl'; setLang(s.lang); saveSettings(s); g.localize(); g.audio.play('click'); this.show('settings');
         } }, h('span', { class: 'ic', html: ICON.globe }), h('span', { class: 'lb' }, t('language')), h('i', null, getLang() === 'nl' ? 'Nederlands' : 'English')));
       }
     };

@@ -1,6 +1,7 @@
 // Low-poly scenery: trees, windmills, tulip fields, rock arches, igloos and friends.
 import * as THREE from '../vendor/three.module.min.js';
 import { mergeColored, mat4, lerp, TAU, makeCanvas, canvasTexture, clamp } from './util.js';
+import { buildTrackProps } from './props.js';
 
 const V3 = THREE.Vector3;
 
@@ -84,12 +85,6 @@ function geoBush(rnd, colors) {
     { geo: jitter(new THREE.IcosahedronGeometry(1, 1), 0.3, rnd), color: colors[0], matrix: mat4(0, 0.6, 0, 0, 0, 0, 1, 0.8, 1) },
     { geo: jitter(new THREE.IcosahedronGeometry(0.7, 0), 0.2, rnd), color: colors[1], matrix: mat4(0.8, 0.45, 0.3) },
   ]);
-}
-
-function geoTulip() {
-  const top = new THREE.ConeGeometry(0.36, 0.5, 5, 1, true); top.translate(0, 0.6, 0);
-  const bot = new THREE.ConeGeometry(0.36, 0.45, 5, 1, true); bot.rotateX(Math.PI); bot.translate(0, 0.125, 0);
-  return mergeColored([{ geo: top, color: 0xffffff }, { geo: bot, color: 0xdddddd }]);
 }
 
 function geoHouse(roof) {
@@ -276,6 +271,7 @@ function instanced(w, geo, material, list, shadowR) {
   m.instanceMatrix.needsUpdate = true;
   if (m.instanceColor) m.instanceColor.needsUpdate = true;
   m.frustumCulled = false;
+  m.castShadow = !!shadowR;
   w.scene.add(m);
   return m;
 }
@@ -290,7 +286,7 @@ function buildShadows(w) {
   const tex = canvasTexture(c);
   const geo = new THREE.PlaneGeometry(2, 2); geo.rotateX(-Math.PI / 2);
   const night = w.theme.id === 'snow';
-  const mat = new THREE.MeshBasicMaterial({ map: tex, color: night ? 0x0a1a40 : 0x10240a, transparent: true, opacity: night ? 0.28 : 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+  const mat = new THREE.MeshBasicMaterial({ map: tex, color: night ? 0x0a1a40 : 0x10240a, transparent: true, opacity: night ? 0.2 : 0.24, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   const m = new THREE.InstancedMesh(geo, mat, list.length);
   const up = new V3(0, 1, 0), nrm = new V3(), q = new THREE.Quaternion(), sc = new V3(), pos = new V3(), mtx = new THREE.Matrix4();
   // Shadows fall away from the sun.
@@ -313,27 +309,37 @@ function buildShadows(w) {
 
 function gantry(w) {
   const tr = w.track, hw = tr.halfWidth;
-  const c = makeCanvas(1024, 128), g = c.getContext('2d');
-  for (let x = 0; x < 64; x++) for (let y = 0; y < 8; y++) {
+  // Checkered banner with a name plate that is sized to fit the lettering.
+  const SQ = 26, COLS = 77, ROWS = 8;
+  const c = makeCanvas(COLS * SQ, ROWS * SQ), g = c.getContext('2d');
+  for (let x = 0; x < COLS; x++) for (let y = 0; y < ROWS; y++) {
     g.fillStyle = (x + y) % 2 ? '#1c1c28' : '#ffffff';
-    g.fillRect(x * 16, y * 16, 16, 16);
+    g.fillRect(x * SQ, y * SQ, SQ, SQ);
   }
-  g.fillStyle = '#ffcf33'; g.fillRect(272, 14, 480, 100);
-  g.strokeStyle = '#1c1c28'; g.lineWidth = 8; g.strokeRect(272, 14, 480, 100);
-  g.fillStyle = '#e8413c';
-  g.font = '700 78px Fredoka, "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText('KRABBEL KART', 512, 68);
+  const label = 'KRABBEL KART';
+  const fontOf = (px) => `700 ${px}px Fredoka, "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif`;
+  let fs = 150;
+  g.font = fontOf(fs);
+  let tw = g.measureText(label).width;
+  const maxW = c.width * 0.6;
+  if (tw > maxW) { fs = Math.floor((fs * maxW) / tw); g.font = fontOf(fs); tw = g.measureText(label).width; }
+  const pw = tw + 120, ph = c.height - 24, px = (c.width - pw) / 2, py = 12, rad = 30;
+  g.beginPath();
+  g.moveTo(px + rad, py); g.arcTo(px + pw, py, px + pw, py + ph, rad); g.arcTo(px + pw, py + ph, px, py + ph, rad);
+  g.arcTo(px, py + ph, px, py, rad); g.arcTo(px, py, px + pw, py, rad); g.closePath();
+  g.fillStyle = '#ffcf33'; g.fill();
+  g.strokeStyle = '#1c1c28'; g.lineWidth = 12; g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  g.strokeStyle = '#1c1c28'; g.lineWidth = 18; g.strokeText(label, c.width / 2, c.height / 2 + fs * 0.04);
+  g.fillStyle = '#ff4b3c'; g.fillText(label, c.width / 2, c.height / 2 + fs * 0.04);
   const tex = canvasTexture(c);
   const span = hw * 2 + 6;
   const grp = new THREE.Group();
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(span, 2.6, 0.5), [
-    new THREE.MeshLambertMaterial({ color: 0x33384a }), new THREE.MeshLambertMaterial({ color: 0x33384a }),
-    new THREE.MeshLambertMaterial({ color: 0x33384a }), new THREE.MeshLambertMaterial({ color: 0x33384a }),
-    new THREE.MeshLambertMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.25 }),
-    new THREE.MeshLambertMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.25 }),
-  ]);
+  const dark = new THREE.MeshLambertMaterial({ color: 0x33384a });
+  const face = new THREE.MeshLambertMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.25 });
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(span, 2.6, 0.5), [dark, dark, dark, dark, face, face]);
   beam.position.y = 8.6;
+  beam.castShadow = true;
   grp.add(beam);
   const postGeo = mergeColored([
     { geo: new THREE.BoxGeometry(0.9, 9.9, 0.9), color: 0xe8413c, matrix: mat4(-span / 2 + 0.45, 4.9, 0) },
@@ -341,10 +347,103 @@ function gantry(w) {
     { geo: new THREE.BoxGeometry(1.5, 0.8, 1.5), color: 0xffffff, matrix: mat4(-span / 2 + 0.45, 0.2, 0) },
     { geo: new THREE.BoxGeometry(1.5, 0.8, 1.5), color: 0xffffff, matrix: mat4(span / 2 - 0.45, 0.2, 0) },
   ]);
-  grp.add(new THREE.Mesh(postGeo, w.mats.scenery));
+  const posts = new THREE.Mesh(postGeo, w.mats.scenery);
+  posts.castShadow = true;
+  grp.add(posts);
+  // A string of little flags under the banner.
+  const cols = [0xff4b4b, 0xffd21f, 0x4fb8ff, 0x5fd048, 0xff7ac0, 0xb46bff].map((h) => new THREE.Color(h));
+  const pos = [], colr = [];
+  const nFlags = Math.floor((span - 2) / 0.95);
+  for (let i = 0; i < nFlags; i++) {
+    const x0 = -span / 2 + 1 + i * 0.95, sag = Math.sin((i / (nFlags - 1)) * Math.PI) * 0.35;
+    pos.push(x0, 7.3 - sag, 0, x0 + 0.85, 7.3 - sag, 0, x0 + 0.42, 6.35 - sag, 0);
+    const cc = cols[i % cols.length];
+    for (let k = 0; k < 3; k++) colr.push(cc.r, cc.g, cc.b);
+  }
+  const bg = new THREE.BufferGeometry();
+  bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  bg.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
+  bg.computeVertexNormals();
+  grp.add(new THREE.Mesh(bg, w.mats.sceneryDouble));
   grp.position.set(tr.px[0], tr.py[0] - 0.2, tr.pz[0]);
   grp.rotation.y = tr.heading[0];
   w.scene.add(grp);
+}
+
+// Bulb fields the Dutch way: long bands of one colour, with buds poking out.
+function tulipFields(w, fields) {
+  const tr = w.track, rnd = w.rnd, p = new V3(), q = new V3(), info = {};
+  const palette = [0xff3b4e, 0xffd21f, 0xff7ac0, 0xff8a1f, 0xb05cff, 0xffffff, 0xff4fa0, 0xffe45e].map((c) => new THREE.Color(c));
+  const leaf = new THREE.Color(0x2f8a3a), tmp = new THREE.Color();
+  const pos = [], colr = [], buds = [];
+  const HALF = 0.72, TOP = 0.46;
+  const quad = (a, b, c2, d, col) => {
+    pos.push(a.x, a.y, a.z, b.x, b.y, b.z, c2.x, c2.y, c2.z, a.x, a.y, a.z, c2.x, c2.y, c2.z, d.x, d.y, d.z);
+    for (let k = 0; k < 6; k++) colr.push(col.r, col.g, col.b);
+  };
+  for (const [frac, side] of fields) {
+    const s0 = frac * tr.n;
+    const c0 = Math.floor(rnd() * palette.length);
+    for (let row = 0; row < 14; row++) {
+      const lat = side * (tr.limit + 5.5 + row * 2.05);
+      const color = palette[(c0 + Math.floor(row / 2)) % palette.length];
+      let prev = null;
+      for (let k = -26; k <= 26; k++) {
+        const s = s0 + k;
+        tr.posAt(s, lat - HALF, p); tr.posAt(s, lat + HALF, q);
+        const mx = (p.x + q.x) / 2, mz = (p.z + q.z) / 2;
+        tr.distInfo(mx, mz, info);
+        const h = w.heightAt(mx, mz);
+        const ok = info.d >= Math.abs(lat) - 2.5 && h > (w.waterLevel === undefined ? -1e9 : w.waterLevel + 0.6) && w.slopeAt(mx, mz) < 0.42;
+        if (!ok) { prev = null; continue; }
+        const cur = {
+          bl: new V3(p.x, w.heightAt(p.x, p.z) - 0.1, p.z), tl: new V3(p.x, w.heightAt(p.x, p.z) + TOP, p.z),
+          tr: new V3(q.x, w.heightAt(q.x, q.z) + TOP, q.z), br: new V3(q.x, w.heightAt(q.x, q.z) - 0.1, q.z),
+        };
+        if (prev) {
+          tmp.copy(color).multiplyScalar(0.9 + rnd() * 0.16);
+          quad(prev.tl, cur.tl, cur.tr, prev.tr, tmp);       // flowers on top
+          quad(prev.bl, cur.bl, cur.tl, prev.tl, leaf);       // leafy sides
+          quad(prev.tr, cur.tr, cur.br, prev.br, leaf);
+          for (let b = 0; b < 2; b++) {
+            const u = rnd(), v = 0.15 + rnd() * 0.7;
+            const x = (prev.tl.x + (cur.tl.x - prev.tl.x) * u) * (1 - v) + (prev.tr.x + (cur.tr.x - prev.tr.x) * u) * v;
+            const z = (prev.tl.z + (cur.tl.z - prev.tl.z) * u) * (1 - v) + (prev.tr.z + (cur.tr.z - prev.tr.z) * u) * v;
+            buds.push({ x, y: w.heightAt(x, z) + TOP - 0.02, z, ry: rnd() * 3, s: 0.8 + rnd() * 0.5, color: new THREE.Color().copy(color).multiplyScalar(0.82 + rnd() * 0.3) });
+          }
+        }
+        prev = cur;
+      }
+    }
+  }
+  if (!pos.length) return;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
+  geo.computeVertexNormals();
+  const bands = new THREE.Mesh(geo, w.mats.sceneryDouble);
+  bands.receiveShadow = true;
+  w.scene.add(bands);
+  const bud = new THREE.ConeGeometry(0.2, 0.36, 4, 1, true); bud.translate(0, 0.18, 0);
+  instanced(w, mergeColored([{ geo: bud, color: 0xffffff }]), w.mats.scenery, buds);
+}
+
+// Tiny wild flowers / pebbles sprinkled along the verge.
+function sprinkle(w, colors, count, size = 1) {
+  const tr = w.track, rnd = w.rnd, p = new V3(), info = {}, list = [];
+  const cols = colors.map((c) => new THREE.Color(c));
+  for (let i = 0; i < count * 3 && list.length < count; i++) {
+    const s = rnd() * tr.n, sd = rnd() < 0.5 ? -1 : 1;
+    const lat = sd * (tr.halfWidth + tr.curb + 2.8 + rnd() * rnd() * 26);
+    tr.posAt(s, lat, p);
+    tr.distInfo(p.x, p.z, info);
+    if (info.d < Math.abs(lat) - 2) continue;
+    const h = w.heightAt(p.x, p.z);
+    if (w.waterLevel !== undefined && h < w.waterLevel + 0.4) continue;
+    list.push({ x: p.x, y: h - 0.02, z: p.z, ry: rnd() * 3, s: size * (0.7 + rnd() * 0.8), color: cols[Math.floor(rnd() * cols.length)] });
+  }
+  const g = new THREE.ConeGeometry(0.17, 0.3, 4, 1, true); g.translate(0, 0.15, 0);
+  instanced(w, mergeColored([{ geo: g, color: 0xffffff }]), w.mats.scenery, list);
 }
 
 function balloons(w, n, palette) {
@@ -375,27 +474,8 @@ function meadow(w) {
   instanced(w, geoBush(rnd, [0x5fb840, 0x7fcf4f]), M, scatter(w, { count: 170, maxD: 60, minH: -2.4, maxSlope: 0.4, s0: 0.8, s1: 1.6 }), 1.3);
   instanced(w, geoRock(rnd, [0x9aa39a]), M, scatter(w, { count: 90, minH: -4, maxSlope: 0.9, s0: 0.6, s1: 2.4, radius: 520, sink: 0.2 }));
 
-  // Tulip fields: bands of colour running alongside the road.
-  const tulipColors = [0xff3b4e, 0xffd21f, 0xff7ac0, 0xff8a1f, 0xb05cff, 0xffffff, 0xff4fa0, 0xffe45e].map((c) => new THREE.Color(c));
-  const tulips = [], p = new V3(), info = {};
-  const fields = [[0.045, 1], [0.2, -1], [0.33, 1], [0.47, -1], [0.6, 1], [0.74, -1], [0.9, -1], [0.965, 1]];
-  for (const [frac, side] of fields) {
-    const s0 = frac * tr.n, len = 34;
-    const c0 = Math.floor(rnd() * tulipColors.length);
-    for (let row = 0; row < 16; row++) {
-      const lat = side * (tr.limit + 5 + row * 1.9);
-      const color = tulipColors[(c0 + Math.floor(row / 2)) % tulipColors.length];
-      for (let k = -len; k <= len; k++) {
-        tr.posAt(s0 + k * 0.78, lat, p);
-        tr.distInfo(p.x, p.z, info);
-        if (info.d < Math.abs(lat) - 2.5) continue;
-        const h = w.heightAt(p.x, p.z);
-        if (h < -2.6 || w.slopeAt(p.x, p.z) > 0.45) continue;
-        tulips.push({ x: p.x + (rnd() - 0.5) * 0.3, y: h, z: p.z + (rnd() - 0.5) * 0.3, ry: rnd() * 3, s: 0.85 + rnd() * 0.4, color });
-      }
-    }
-  }
-  instanced(w, geoTulip(), M, tulips);
+  tulipFields(w, [[0.045, 1], [0.2, -1], [0.33, 1], [0.47, -1], [0.6, 1], [0.74, -1], [0.9, -1], [0.965, 1]]);
+  sprinkle(w, [0xffffff, 0xffe45e, 0xff9ad0, 0xc9a6ff], 1500, 0.62);
 
   // Windmills with turning sails.
   const mills = alongTrack(w, { count: 5, even: true, phase: 0.35, sides: [1, -1, -1, 1, -1], d0: 34, d1: 52, face: true, minH: -2 });
@@ -425,6 +505,7 @@ function meadow(w) {
     blades.position.set(0, 12.2, 3.1);
     grp.add(blades);
     grp.position.set(s.x, s.y - 0.3, s.z); grp.rotation.y = s.ry; grp.scale.setScalar(1.25);
+    grp.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     w.scene.add(grp);
     w._shadows.push({ x: s.x, z: s.z, r: 5 });
     const sp = 0.5 + rnd() * 0.4;
@@ -455,8 +536,10 @@ function canyon(w) {
     const m = new THREE.Mesh(geoArch(tr.limit + 4.5, 3.6, rnd, [0xb5472f, 0xd96a3c, 0xf09a55, 0xc9573a]), M);
     m.position.set(tr.px[i], tr.py[i] - 2.5, tr.pz[i]);
     m.rotation.y = tr.heading[i];
+    m.castShadow = true;
     w.scene.add(m);
   }
+  sprinkle(w, [0x9a4a36, 0xc9704a, 0x7d3a30], 900, 1.1);
   balloons(w, 4, [[0xfff1a0, 0xff5a3c], [0x7a5cff, 0xffd21f], [0xffffff, 0xff8a1f], [0x2fd0d0, 0xfff1a0]]);
 }
 
@@ -483,6 +566,7 @@ function island(w) {
     const x = best.x - Math.cos(1.1) * 8, z = best.z - Math.sin(1.1) * 8;
     const lh = new THREE.Mesh(geoLighthouse(), M);
     lh.position.set(x, w.heightAt(x, z) - 0.5, z);
+    lh.castShadow = true;
     w.scene.add(lh);
     const lamp = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 2.2, 10), new THREE.MeshBasicMaterial({ color: 0xfff2a8 }));
     lamp.position.set(x, lh.position.y + 19.6, z);
@@ -512,6 +596,7 @@ function island(w) {
   w.scene.add(glow);
   w.updaters.push((dt, t) => { glow.material.color.setRGB(1, 0.32 + Math.sin(t * 2.3) * 0.1, 0.05); });
   w.addSmoke(vol.x, cy + 14, vol.z, 0xd8d0c8);
+  sprinkle(w, [0xff6fae, 0xffffff, 0xffd21f, 0xff8a3c], 1100, 0.62);
   balloons(w, 3, [[0xff4b4b, 0xfff1a0], [0x2fd0d0, 0xffffff], [0xffcf33, 0xff7ac0]]);
 }
 
@@ -574,6 +659,7 @@ export function buildScenery(w) {
     sceneryDouble: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
   };
   gantry(w);
+  buildTrackProps(w);
   ({ meadow, canyon, island, snow })[w.theme.id](w);
   buildShadows(w);
 }

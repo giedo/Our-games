@@ -8,11 +8,14 @@ import { GameAudio } from './audio.js';
 import { StickerBook, loadSettings, saveSettings } from './store.js';
 import { buildRacerModel, disposeRacerModel } from './racerModel.js';
 import { UI } from './ui.js';
+import { Ceremony } from './ceremony.js';
+import { TRACKS } from './tracks.js';
 import { h, ICON } from './dom.js';
 import { setLang, detectLang, t } from './i18n.js';
 import { damp } from './util.js';
 
 const TOTAL_KARTS = 8;
+const CUP_POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
 
 function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) {
@@ -35,6 +38,9 @@ class Game {
     const q = new URLSearchParams(location.search);
     this.fixedQuality = q.has('q');
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.lowGraphics = false; // set automatically when the device struggles
     this.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
     this.pixelRatio = this.fixedQuality ? Number(q.get('q')) || 1 : this.maxPixelRatio;
     this.input = new Input();
@@ -43,6 +49,7 @@ class Game {
     this.ui = new UI(this);
     this.menuCam = new THREE.PerspectiveCamera(56, 1, 0.3, 4000);
     this.world = null; this.race = null; this.paused = false;
+    this.cup = null; this.ceremony = null;
     this.preview = null; this.previewPick = null;
     this.menuView = 'fly'; this.flyS = 0; this.orbit = 0.6;
     this.camPos = new THREE.Vector3(); this.camLook = new THREE.Vector3(); this.camReady = false;
@@ -50,7 +57,8 @@ class Game {
     this._v = new THREE.Vector3(); this._l = new THREE.Vector3();
 
     const unlock = () => { this.audio.unlock(); this.audio.applySettings(); };
-    addEventListener('pointerdown', unlock, { passive: true });
+    // Browsers only allow sound after a tap or key press; iOS wants the end of the tap.
+    for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click']) addEventListener(ev, unlock, { passive: true });
     addEventListener('keydown', unlock);
     addEventListener('resize', () => this.resize());
     addEventListener('orientationchange', () => setTimeout(() => this.resize(), 200));
@@ -62,7 +70,15 @@ class Game {
     });
     this.canvas.addEventListener('pointerdown', () => { if (this.race) this.race.skipIntro(); });
     this.hudRoot.addEventListener('pointerdown', () => { if (this.race) this.race.skipIntro(); });
+    document.getElementById('rotate-ok').addEventListener('click', () => document.body.classList.add('portrait-ok'));
+    this.localize();
     this.resize();
+  }
+
+  // Texts that live in the page itself rather than in a menu screen.
+  localize() {
+    document.getElementById('rotate-text').textContent = t('rotateDevice');
+    document.getElementById('rotate-ok').textContent = t('playAnyway');
   }
 
   async start() {
@@ -89,9 +105,14 @@ class Game {
     if (this.preview && this.world) this.world.scene.remove(this.preview.root, this.preview.shadow);
     if (this.world) this.world.dispose();
     this.world = new World(trackById(id));
+    this.applyGraphics();
     this.flyS = this.world.track.n * 0.03;
     this.camReady = false;
     if (this.preview) this.placePreview();
+  }
+
+  applyGraphics() {
+    if (this.world) this.world.setShadows(this.settings.fancy !== false && !this.lowGraphics);
   }
 
   // Shows a "Loading" card for one frame, then swaps the landscape.
@@ -192,8 +213,9 @@ class Game {
       if (this.race) this.endRace(true);
       this.hudRoot.replaceChildren();
       this.hudRoot.classList.toggle('two', cfg.players.length > 1);
+      if (this.ceremony) this.endCeremony(true);
       this.race = new Race(this, this.world, {
-        players: cfg.players, opponents: this.pickOpponents(cfg.players), difficulty: cfg.difficulty, laps: 3,
+        players: cfg.players, opponents: cfg.opponents || this.pickOpponents(cfg.players), difficulty: cfg.difficulty, laps: 3, label: cfg.label,
       });
       this.pauseBtn = h('button', { class: 'pause-btn', 'aria-label': t('paused'), html: ICON.pause, onclick: (e) => { e.stopPropagation(); this.setPaused(true); } });
       this.hudRoot.append(this.pauseBtn);
@@ -219,13 +241,79 @@ class Game {
   }
 
   onRaceDone(results) {
-    this.ui.show('results', results);
+    const cup = this.cup;
+    if (cup && !cup.scored[cup.index]) {
+      // Tournament: hand out points for this race.
+      cup.scored[cup.index] = true;
+      for (const r of results) {
+        const e = cup.entries[r.index];
+        r.points = CUP_POINTS[r.place - 1] || 0;
+        e.points += r.points; e.places.push(r.place);
+      }
+    }
+    this.ui.show('results', { results, cup });
+  }
+
+  // ----- tournament -----
+  startCup(cfg) {
+    const opponents = this.pickOpponents(cfg.players);
+    const entry = (p, human, i) => ({ driver: p.driver, vehicle: p.vehicle, name: p.driver.name, human, playerIndex: human ? i : -1, points: 0, places: [] });
+    this.cup = {
+      tracks: TRACKS.map((tk) => tk.id), index: 0, scored: [], players: cfg.players, opponents, difficulty: cfg.difficulty,
+      entries: cfg.players.map((p, i) => entry(p, true, i)).concat(opponents.map((o, i) => entry(o, false, i))),
+    };
+    this.startCupRace();
+  }
+
+  startCupRace() {
+    const c = this.cup;
+    this.startRace({
+      trackId: c.tracks[c.index], players: c.players, opponents: c.opponents, difficulty: c.difficulty,
+      label: `${t('race')} ${c.index + 1}/${c.tracks.length}`,
+    });
+  }
+
+  // Entries sorted best first: points, then best single result, then the sum of places.
+  cupStandings() {
+    const best = (e) => (e.places.length ? Math.min(...e.places) : 99);
+    const sum = (e) => e.places.reduce((a, b) => a + b, 0);
+    return this.cup.entries.slice().sort((a, b) => b.points - a.points || best(a) - best(b) || sum(a) - sum(b));
+  }
+
+  nextCupRace() {
+    const c = this.cup;
+    if (c.index + 1 < c.tracks.length) { c.index++; this.startCupRace(); }
+    else this.startCeremony();
+  }
+
+  startCeremony() {
+    const ranking = this.cupStandings();
+    this.endRace(true);
+    this.ceremony = new Ceremony(this, this.world, ranking);
+    this.audio.startMusic('podium');
+    this.audio.play('win', 1);
+    this.ui.show('ceremony', ranking);
+  }
+
+  endCeremony(keepMusic) {
+    if (!this.ceremony) return;
+    this.ceremony.dispose();
+    this.ceremony = null;
+    this.camReady = false;
+    if (!keepMusic) this.audio.startMusic('menu');
+  }
+
+  quitToMenu() {
+    this.endRace(true);
+    this.endCeremony(true);
+    this.cup = null;
+    this.audio.startMusic('menu');
   }
 
   setPaused(on) {
     if (!this.race) return;
     this.paused = on;
-    if (on) { this.audio.engine([], false); this.ui.show('pause'); }
+    if (on) { this.audio.engine([], null); this.ui.show('pause'); }
     else if (this.ui.current === 'pause') this.ui.hide();
   }
 
@@ -245,6 +333,9 @@ class Game {
         const sdt = (dt * this.timeScale) / steps;
         for (let i = 0; i < steps && this.race; i++) { w.update(sdt); this.race.update(sdt); }
       }
+    } else if (this.ceremony) {
+      w.update(dt);
+      this.ceremony.update(dt);
     } else {
       w.update(dt);
       this.updateMenu(dt);
@@ -257,21 +348,26 @@ class Game {
       if (this.frames >= 90) {
         const avg = this.frameAcc / this.frames;
         this.frames = 0; this.frameAcc = 0;
-        if (avg > 1 / 38 && this.pixelRatio > 0.75) { this.pixelRatio = Math.max(0.75, this.pixelRatio - 0.25); this.resize(); }
+        if (avg > 1 / 38) {
+          // Too slow: first lower the resolution a little, then drop the shadows, then lower it further.
+          if (this.pixelRatio > 1.25) { this.pixelRatio = Math.max(1.25, this.pixelRatio - 0.25); this.resize(); }
+          else if (!this.lowGraphics && this.settings.fancy !== false) { this.lowGraphics = true; this.applyGraphics(); }
+          else if (this.pixelRatio > 0.75) { this.pixelRatio = Math.max(0.75, this.pixelRatio - 0.25); this.resize(); }
+        }
       }
     }
   }
 
   render() {
     const r = this.renderer, w = this.world, W = this.vw, H = this.vh;
-    const cams = this.race ? this.race.cams.map((c) => c.cam) : [this.menuCam];
+    const cams = this.race ? this.race.cams.map((c) => c.cam) : this.ceremony ? [this.ceremony.cam] : [this.menuCam];
     const n = cams.length;
     r.setScissorTest(n > 1);
     for (let i = 0; i < n; i++) {
       const cam = cams[i];
       const vw = W / n, x = i * vw;
       const aspect = vw / H;
-      const shift = !this.race && this.menuView === 'kart' ? 0.17 : 0;
+      const shift = this.race ? 0 : this.ceremony ? this.ceremony.shift : this.menuView === 'kart' ? 0.17 : 0;
       if (Math.abs(cam.aspect - aspect) > 1e-4 || cam.userData.shift !== shift) {
         cam.aspect = aspect; cam.userData.shift = shift;
         if (shift) cam.setViewOffset(vw, H, 0, H * shift, vw, H); else cam.clearViewOffset();
@@ -279,9 +375,15 @@ class Game {
       }
       r.setViewport(x, 0, vw, H);
       if (n > 1) r.setScissor(x, 0, vw, H);
+      // Shadows are drawn in a box around what this view is looking at.
+      const f = this.race ? this.race.cams[i].kart : null;
+      if (f) w.focusShadow(f.x + Math.sin(f.dir) * 26, f.y, f.z + Math.cos(f.dir) * 26);
+      else if (this.ceremony) w.focusShadow(this.ceremony.focus.x, this.ceremony.focus.y, this.ceremony.focus.z);
+      else w.focusShadow(this.camLook.x, this.camLook.y, this.camLook.z);
       const scale = (H * this.pixelRatio) / (2 * Math.tan((cam.fov * Math.PI) / 360));
       for (const u of w.pointScaleUniforms) u.value = scale;
       if (this.race) this.race.particles.setScale(scale);
+      if (this.ceremony) this.ceremony.particles.setScale(scale);
       r.render(w.scene, cam);
     }
   }

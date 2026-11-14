@@ -199,7 +199,40 @@ export class World {
     const hemi = new THREE.HemisphereLight(L.sky, L.ground, L.hemiI);
     const sun = new THREE.DirectionalLight(L.sun, L.sunI);
     sun.position.copy(this.sunDir).multiplyScalar(100);
-    this.scene.add(hemi, sun);
+    // Real shadows in a box that follows the player (see focusShadow).
+    const R = 58;
+    sun.shadow.mapSize.set(2048, 2048);
+    const sc = sun.shadow.camera;
+    sc.left = -R; sc.right = R; sc.top = R; sc.bottom = -R; sc.near = 1; sc.far = 300;
+    sc.updateProjectionMatrix();
+    sun.shadow.bias = -0.0006;
+    sun.shadow.normalBias = 0.35;
+    this.shadowTexel = (2 * R) / 2048;
+    this.shadowR = new THREE.Vector3(0, 1, 0).cross(this.sunDir).normalize();
+    this.shadowU = this.sunDir.clone().cross(this.shadowR).normalize();
+    this.sun = sun;
+    this.scene.add(hemi, sun, sun.target);
+    this.setShadows(true);
+  }
+
+  setShadows(on) {
+    this.shadowsOn = on;
+    this.sun.castShadow = on;
+  }
+
+  // Centre the shadow box on a point. The point is snapped to whole shadow-map
+  // pixels so shadows do not shimmer while the camera moves.
+  focusShadow(x, y, z) {
+    if (!this.shadowsOn) return;
+    const t = this.shadowTexel, r = this.shadowR, u = this.shadowU, d = this.sunDir;
+    const a = Math.round((x * r.x + y * r.y + z * r.z) / t) * t;
+    const b = Math.round((x * u.x + y * u.y + z * u.z) / t) * t;
+    const c = x * d.x + y * d.y + z * d.z;
+    const fx = r.x * a + u.x * b + d.x * c, fy = r.y * a + u.y * b + d.y * c, fz = r.z * a + u.z * b + d.z * c;
+    this.sun.target.position.set(fx, fy, fz);
+    this.sun.position.set(fx + d.x * 150, fy + d.y * 150, fz + d.z * 150);
+    this.sun.target.updateMatrixWorld();
+    this.sun.updateMatrixWorld();
   }
 
   _buildSky() {
@@ -273,15 +306,53 @@ export class World {
         idx[o++] = v01; idx[o++] = v11; idx[o++] = v10;
       }
     }
+    const uv = new Float32Array(n1 * n1 * 2);
+    for (let k = 0; k < n1 * n1; k++) { uv[k * 2] = pos[k * 3] / 13; uv[k * 2 + 1] = pos[k * 3 + 2] / 13; }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(colr, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     geo.setIndex(new THREE.BufferAttribute(idx, 1));
+    geo.computeVertexNormals(); // only used to push shadows off the surface; shading stays faceted
     geo.computeBoundingSphere();
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: this._detailTexture() });
     const mesh = new THREE.Mesh(geo, mat);
+    mesh.receiveShadow = true;
+    mesh.castShadow = !!th.terrainShadow;
     this.scene.add(mesh);
     this.terrainMesh = mesh;
+  }
+
+  // A soft tiling texture multiplied over the terrain colours: mottling plus
+  // little strokes (grass blades, sand ripples, snow sparkle) so the ground is not flat paint.
+  _detailTexture() {
+    const S = 256, c = makeCanvas(S, S), g = c.getContext('2d');
+    const rnd = mulberry32(this.def.seed + 31);
+    const kind = this.theme.id;
+    g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, S, S);
+    // Big soft blotches, drawn wrapped so the tile repeats without seams.
+    for (let i = 0; i < 46; i++) {
+      const x = rnd() * S, y = rnd() * S, r = 18 + rnd() * 46, dark = rnd() < 0.55;
+      for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
+        const gr = g.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+        gr.addColorStop(0, dark ? 'rgba(150,150,150,0.20)' : 'rgba(255,255,255,0.30)');
+        gr.addColorStop(1, dark ? 'rgba(150,150,150,0)' : 'rgba(255,255,255,0)');
+        g.fillStyle = gr; g.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+      }
+    }
+    const strokes = kind === 'snow' ? 260 : kind === 'canyon' ? 420 : 900;
+    g.lineCap = 'round';
+    for (let i = 0; i < strokes; i++) {
+      const x = rnd() * S, y = rnd() * S, dark = rnd() < 0.6;
+      g.strokeStyle = dark ? 'rgba(120,120,120,0.32)' : 'rgba(255,255,255,0.5)';
+      g.lineWidth = 1 + rnd() * 1.4;
+      g.beginPath();
+      if (kind === 'canyon') { g.moveTo(x, y); g.lineTo(x + 6 + rnd() * 16, y + (rnd() - 0.5) * 2); }
+      else if (kind === 'snow') { g.moveTo(x, y); g.lineTo(x + 0.5, y + 0.5); }
+      else { g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - 3 - rnd() * 5); }
+      g.stroke();
+    }
+    return canvasTexture(c, { repeat: true });
   }
 
   // Terrain height (matches the triangles of the terrain mesh exactly).
@@ -369,7 +440,9 @@ export class World {
       geo.computeVertexNormals();
       const mat = new THREE.MeshLambertMaterial({ map: this._roadTexture(), color: this.theme.road.tint });
       mat.color.multiplyScalar(1.5);
-      this.scene.add(new THREE.Mesh(geo, mat));
+      const road = new THREE.Mesh(geo, mat);
+      road.receiveShadow = true;
+      this.scene.add(road);
     }
     // Curbs (both sides) with striped texture.
     {
@@ -393,7 +466,9 @@ export class World {
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       geo.setIndex(idx);
       geo.computeVertexNormals();
-      this.scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: this._curbTexture() })));
+      const curbs = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: this._curbTexture() }));
+      curbs.receiveShadow = true;
+      this.scene.add(curbs);
     }
     // Shoulders: a soft skirt that hides the seam between road and terrain.
     {
@@ -414,7 +489,9 @@ export class World {
       geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       geo.setIndex(idx);
       geo.computeVertexNormals();
-      this.scene.add(new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: this.theme.road.shoulder })));
+      const skirt = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: this.theme.road.shoulder }));
+      skirt.receiveShadow = true;
+      this.scene.add(skirt);
     }
     // Start / finish line.
     {
@@ -426,6 +503,7 @@ export class World {
       const tex = canvasTexture(c, { repeat: true });
       tex.repeat.set(3, 1);
       const mesh = this.roadDecal(0, 0, hw * 2, 3.2, new THREE.MeshLambertMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+      mesh.receiveShadow = true;
       this.scene.add(mesh);
     }
     // Boost pads.

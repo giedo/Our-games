@@ -373,7 +373,7 @@ export class Kart {
     sd.rotation.set(-this.pitch, this.dir, this.roll, 'YXZ');
     const k = 1 - air * 0.1;
     sd.scale.set(2.6 * k, 1, (m.len + 1.2) * k);
-    sd.material.opacity = 0.55 * k;
+    sd.material.opacity = 0.4 * k;
   }
 
   dispose() {

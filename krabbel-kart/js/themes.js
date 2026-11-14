@@ -56,6 +56,7 @@ export function makeTheme(id, seed, bounds) {
     const top = C(0xf3b56c), green = C(0x8aa04e), floor = C(0xe8a25c), dark = C(0x5a2330);
     return {
       id,
+      terrainShadow: true, // canyon walls throw long evening shadows over the road
       sky: { top: 0x2b1e6e, mid: 0xff7a45, bottom: 0xffd58a, sunColor: 0xffc070, sunDir: [-0.62, 0.2, -0.55], stars: 0.35, aurora: 0 },
       fog: { color: 0xffa868, near: 120, far: 900 },
       light: { sun: 0xffb070, sunI: 3.0, sky: 0xb48cff, ground: 0xd9703a, hemiI: 1.25 },

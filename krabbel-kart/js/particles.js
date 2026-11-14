@@ -113,7 +113,7 @@ export class Particles {
       const a = Math.random() * Math.PI * 2, u = Math.random() * 2 - 1, s = speed * (0.4 + Math.random() * 0.6);
       const q = Math.sqrt(1 - u * u);
       this.emit(additive, hexes[i % hexes.length], {
-        x, y, z, vx: Math.cos(a) * q * s, vy: Math.abs(u) * s * (o.up || 1) + (o.lift || 0), vz: Math.sin(a) * q * s,
+        x, y, z, vx: Math.cos(a) * q * s, vy: o.sphere ? u * s : Math.abs(u) * s * (o.up || 1) + (o.lift || 0), vz: Math.sin(a) * q * s,
         life: (o.life || 0.8) * (0.6 + Math.random() * 0.6), size: o.size || 0.4, size1: o.size1 === undefined ? 0 : o.size1,
         gravity: o.gravity === undefined ? 12 : o.gravity, drag: o.drag || 0.5, a: o.a,
       });

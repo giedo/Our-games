@@ -8,11 +8,13 @@
 - **Your drawings become 3D racers.** Take a photo of a drawing on paper (or draw on the screen). The game removes the paper, and turns the drawing into a puffy 3D driver or a chunky 3D vehicle that you can pick like any other racer.
 - **Four worlds**: Tulip Valley (windmills and flower fields), Sunset Canyon, Coconut Bay (beaches around a volcano) and Aurora Peaks (snow under the northern lights).
 - **8 racers per race**, 3 laps. Computer racers also use your other drawings, so the kids' characters race each other.
+- **Tournament**: all four tracks in a row, points for every race, standings in between, and a podium ceremony with trophy, confetti and fireworks at the end.
 - **1 or 2 players** on one screen (split screen).
 - **Items**: turbo crayon, paint puddle, paper plane, bubble shield. Boost pads on the road.
 - **Drifting**: hold drift in a corner, the sparks change colour, let go for a boost.
 - **Works with** touch (iPad), keyboard and gamepads.
 - English and Dutch (Settings > Language).
+- Real-time shadows and trackside details (grandstand, flags, corner signs, tyre walls). If the game stutters on an older device it lowers the detail by itself; you can also switch it off under Settings > Shadows and details.
 - No accounts, no ads, no tracking, no network requests after loading. Drawings stay on the device.
 
 ## Controls
@@ -56,6 +58,7 @@ js/tracks.js        track layouts              js/audio.js     synthesised sound
 js/cutout.js        paper removal              js/editor.js    drawing studio
 js/puffy.js         drawing -> 3D mesh         js/drawpad.js   draw-on-screen pad
 js/builtin.js       the built-in doodles       js/ui.js        menus
+js/props.js         grandstand, signs, tyres   js/ceremony.js  podium ceremony
 vendor/             three.js (3D library)      fonts/          Fredoka font
 ```
 
@@ -75,4 +78,4 @@ npm run build:single      # writes dist/krabbel-kart.html
 
 - 3D rendering: [three.js](https://threejs.org) r160, MIT licence (`vendor/THREE-LICENSE`).
 - Font: Fredoka, SIL Open Font Licence 1.1 (`fonts/FREDOKA-LICENSE.txt`).
-- Everything else (code, worlds, doodles, sounds, music) was made for this game. All sound is synthesised in the browser, there are no audio or image files besides the app icons.
+- Everything else (code, worlds, doodles, sounds, music) was made for this game. All sound is synthesised in the browser (engine with a small gearbox model, effects, and one hand-written tune per world), there are no audio or image files besides the app icons.
