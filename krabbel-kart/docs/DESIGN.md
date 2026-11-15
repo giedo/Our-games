@@ -8,7 +8,7 @@ Krabbel Kart is a kart racer where children's own drawings become the racers. Ev
 
 **Originality rule.** Genre mechanics (items that boost, homing shots, knockout races, balloon battles) are fair game. Names, characters, art, music, track layouts and the look of any existing commercial game are not. Every item, mode and world here has its own craft-box identity. Never use a name from another game in code, strings or docs.
 
-**Platform rule.** Plain ES modules, no build step, three.js r160 in `vendor/`. No image or audio files: everything is generated in code. Must stay smooth on an older iPad: aim for at most ~60 draw calls and ~500k triangles in a race view, use `InstancedMesh` and merged vertex-coloured geometry (see `js/scenery.js`), avoid per-frame allocations. English and Dutch for every string.
+**Platform rule.** Plain ES modules, no build step, three.js r160 in `vendor/`. No image or audio files: everything is generated in code. Must stay smooth on an older iPad: nothing may be heavier than the original Tulip Valley world, which measures about 105 draw calls and 700k triangles in a one-player race view (lower is better), use `InstancedMesh` and merged vertex-coloured geometry (see `js/scenery.js`), avoid per-frame allocations. English and Dutch for every string.
 
 ## Age setting
 
@@ -339,6 +339,32 @@ The model (from `buildRacerModel`, `js/racerModel.js`) is `root > tilt > body > 
 - `Race` is rebuilt for every race: keep state in the mode instance or on the race, never in module variables.
 - Materials of the racers' drawings are shared between karts (and with the menu preview). Never change them in place; clone them (see `Kart._takeMats`).
 - `world.update(dt)` runs once per step before `race.update`; things in `world.updaters` accumulate, so do not expect them to be deterministic across frame rates.
-- Draw-call budget: about 60 per view, 500k triangles. Smoke prints both; with two players they are for both views together.
+- Budget: no heavier than the meadow world (about 105 draw calls and 700k triangles in a one-player race view). Smoke prints both; with two players they are for both views together.
 - The one-file build (`npm run build:single`, esbuild) bundles `main.js` and its imports: new files are picked up automatically, but do not use dynamic `import()` or top-level `await` in game code.
 - No names, characters or art from commercial games anywhere (code, strings, docs).
+
+### Contracts between the parallel work packages
+
+**Sounds.** Do not add cases to `GameAudio.play`. Register your own in your own file: `import { registerSfx } from '../audio.js'; registerSfx('boing', (audio, t, vol, dest) => { audio._tone(dest, 'sine', 200, 600, t, 0.2, 0.4 * vol); });` then `race.sfx('boing', kart)` or `game.audio.play('boing')`. Prefix names with your area if they could clash (`item-`, `battle-`, `obs-`, `anim-`).
+
+**Obstacle placements** (`track.obstacles`, in world packs and in `js/tracks.js`): `{ kind, at, lat = 0, skin?, count?, size?, period?, speed? }`.
+
+| kind | fields |
+| --- | --- |
+| `roller` | `count` balls (1 to 3), `size` radius in metres (default 1.6), `period` seconds per crossing (default 4) |
+| `crosser` | `count` critters (3 to 6), `speed` m/s (default 2.5) |
+| `bouncer` | `lat`, `size` radius (default 2.2) |
+| `ramp` | `lat`, `size` width (default 6) |
+| `cones` | `lat`, `count` (default 6) |
+| `slick` | `lat`, `size` radius (default 4) |
+| `spinner` | `lat` of the pivot, `size` arm length (default 6), `period` seconds per turn (default 5) |
+| `popper` | `lat`, `period` seconds (default 3) |
+| `traffic` | `count` vehicles (default 2), `speed` m/s (default 9), `lat` lane |
+
+A skin is `skins[name](kit)` returning a `THREE.Object3D` at unit size, which the obstacle system scales: a ball of radius 1 centred on the origin (`roller`); a critter about 1 m tall standing on y = 0 and facing +Z (`crosser`); a vehicle about 2 m long on y = 0 facing +Z (`traffic`); a flat pad of radius 1 on y = 0 (`bouncer`, `slick`); one light object about 0.8 m tall on y = 0 (`cones`); an arm 1 m long along +X from the origin (`spinner`); a thing about 1.5 m tall on y = 0 (`popper`); a wedge 1 m wide, 1 m long, rising towards +Z (`ramp`). Unknown skin names fall back to the default look of the kind. Keep obstacles out of the first 8% of the lap and off boost pads and item rows.
+
+**Stars.** A gold star pickup is an ItemSystem thing with `kind: 'star'`, world position fields `x y z`, and `collect(kart)` (adds to `kart.stars`, plays the effect, finishes the thing). Anything that attracts or counts stars goes through `sys.ofKind('star')`. Road stars for races are built by the items package (`js/stars.js`); Star Scramble may carry its own pickups as long as they follow this contract.
+
+**Battle item pool.** Arena modes return an explicit id list from `itemPool`; ids that are not registered are ignored, so listing items from the table above is safe before they exist.
+
+**Cups.** `js/cups.js` may name worlds that are not registered yet; the cup code must skip unknown world ids.

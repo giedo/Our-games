@@ -113,6 +113,11 @@ function compile(song) {
   return { bars, lead, steps: bars.length * 16 };
 }
 
+// Sounds added by feature files: registerSfx('boing', (audio, t, vol, dest) => audio._tone(dest, 'sine', 200, 600, t, 0.2, 0.4 * vol)).
+// Inside the function use audio._tone, audio._noise, audio._bell, audio._brass and audio._voice like play() does.
+const EXTRA_SFX = {};
+export function registerSfx(name, fn) { EXTRA_SFX[name] = fn; }
+
 // One player's engine.
 class EngineVoice {
   constructor(a, pan) {
@@ -401,7 +406,7 @@ export class GameAudio {
         T('sine', 115, 42, t, 0.32, 0.6 * v); N('lowpass', 900, 200, t, 0.2, 0.4 * v);
         for (let i = 0; i < 10; i++) N('highpass', 3500, 3500, t + 0.08 + Math.random() * 0.55, 0.03, 0.12 * v);
         break;
-      default: break;
+      default: { const f = EXTRA_SFX[name]; if (f) f(this, t, v, d); break; }
     }
   }
 
