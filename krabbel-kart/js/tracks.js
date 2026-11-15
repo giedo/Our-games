@@ -1,10 +1,14 @@
 // Track layouts + the Track class (a closed spline sampled every ~2 metres).
 import * as THREE from '../vendor/three.module.min.js';
-import { angleDiff, clamp } from './util.js';
+import { angleDiff, clamp, TAU } from './util.js';
+import { WORLD_PACKS } from './worlds/index.js';
+import { addStrings } from './i18n.js';
 
 // Control points are [x, z, height]. The first point sits in the middle of the
 // start straight, and the track runs in the direction of the second point.
-export const TRACKS = [
+// A def can also carry: theme (look to use when it differs from id, see arenaDef),
+// arena (true for arena variants), obstacles (see js/obstacles.js).
+const BUILTIN_TRACKS = [
   {
     id: 'meadow',
     seed: 11,
@@ -62,8 +66,30 @@ export const TRACKS = [
   },
 ];
 
+// The four built-in worlds first, then every registered world pack (see js/worlds/index.js).
+export const TRACKS = BUILTIN_TRACKS.concat(WORLD_PACKS.map((p) => Object.assign({}, p.track, { id: p.id })));
+
+// A pack's names for the track picker live in its own `strings: { en: { name, sub }, nl: { ... } }`.
+for (const p of WORLD_PACKS) {
+  const pack = {};
+  for (const l in p.strings) pack[l] = { tracks: { [p.id]: p.strings[l].name }, trackSub: { [p.id]: p.strings[l].sub } };
+  addStrings(pack);
+}
+
 export function trackById(id) {
   return TRACKS.find((t) => t.id === id) || TRACKS[0];
+}
+
+// The arena variant of a world: a wide ring road in the same look (theme and landscape seed),
+// for battle modes. The ring is a normal closed track, so all the track maths keeps working.
+export function arenaDef(worldId) {
+  const base = trackById(worldId), R = 55, n = 14;
+  const points = [];
+  for (let i = 0; i < n; i++) points.push([Math.sin((i / n) * TAU) * R, Math.cos((i / n) * TAU) * R, 0]);
+  return {
+    id: `${base.id}-arena`, theme: base.id, arena: true, seed: base.seed, scale: 1, width: 30, points,
+    itemRows: [0.1, 0.35, 0.6, 0.85], boostPads: [], obstacles: [],
+  };
 }
 
 const HASH = 40; // spatial hash cell size (metres)
@@ -227,12 +253,12 @@ export class Track {
     return this.heading[i0] + angleDiff(this.heading[i0], this.heading[i1]) * f;
   }
 
-  // Largest absolute curvature in the next `metres` of road.
-  maxCurvAhead(i, metres) {
+  // Largest absolute curvature in the next `metres` of road (dir = -1 looks the other way round the loop).
+  maxCurvAhead(i, metres, dir = 1) {
     const steps = Math.ceil(metres / this.seg);
     let m = 0;
     for (let k = 0; k <= steps; k += 2) {
-      const c = Math.abs(this.curv[this.wrap(i + k)]);
+      const c = Math.abs(this.curv[this.wrap(i + k * dir)]);
       if (c > m) m = c;
     }
     return m;

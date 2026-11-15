@@ -1,6 +1,6 @@
 // Heads-up display for one player: place, lap, timer, item slot, minimap,
 // messages and the on-screen touch controls.
-import { ITEMS, ITEM_ICONS } from './items.js';
+import { itemById } from './items.js';
 import { formatTime, clamp } from './util.js';
 import { t } from './i18n.js';
 
@@ -20,6 +20,9 @@ export class Hud {
     this.pos = el('div', 'hud-pos');
     this.lap = el('div', 'hud-lap');
     this.time = el('div', 'hud-time', '0:00.00');
+    this.extra = el('div', 'hud-extra');
+    this.badge = el('b', 'item-badge');
+    this._pool = null;
     this.item = el('button', 'hud-item');
     this.item.setAttribute('aria-label', t('item'));
     this.map = el('canvas', 'hud-map');
@@ -29,7 +32,7 @@ export class Hud {
     this.vig = el('div', 'hud-vig');
     this.skip = el('div', 'hud-skip', t('tapToSkip'));
     const col = el('div', 'hud-col');
-    col.append(this.lap, this.time);
+    col.append(this.lap, this.time, this.extra);
     const tl = el('div', 'hud-tl');
     tl.append(this.pos, col);
     root.append(this.vig, tl, this.map, this.msg, this.wrong, this.item, this.skip);
@@ -112,24 +115,53 @@ export class Hud {
   update(dt) {
     const k = this.kart, race = this.race;
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.msg.className = 'hud-msg'; }
-    const place = t('place')[k.place - 1] || String(k.place);
-    this._set('place', place, (v) => {
-      const m = /^(\d+)(.*)$/.exec(v);
-      this.pos.innerHTML = m ? `<b>${m[1]}</b><i>${m[2]}</i>` : v;
-      this.pos.dataset.p = k.place;
+    // The mode decides what the place, lap and extra badges say.
+    const info = race.mode.hudInfo(k);
+    this._set('place', info.place, (v) => {
+      this.pos.textContent = '';
+      this.pos.classList.toggle('none', v === null);
+      const m = v === null ? null : /^(\d+)(.*)$/.exec(v);
+      if (m) { this.pos.append(el('b', '', m[1]), el('i', '', m[2])); this.pos.dataset.p = k.place; }
+      else if (v !== null) { this.pos.textContent = v; delete this.pos.dataset.p; }
     });
-    const lap = clamp(k.lap + 1, 1, race.laps);
-    this._set('lap', lap, (v) => { this.lap.innerHTML = `${t('lap')} <b>${v}</b>/${race.laps}`; });
+    this._set('lap', info.lap, (v) => {
+      this.lap.textContent = '';
+      this.lap.classList.toggle('none', v === null);
+      const m = v === null ? null : /^(\D*)(\d+)(.*)$/.exec(v);
+      if (m) this.lap.append(m[1], el('b', '', m[2]), m[3]); else if (v !== null) this.lap.textContent = v;
+    });
+    const extras = info.extra || [];
+    this._set('extra', extras.map((e) => `${e.icon || ''}|${e.text}`).join('\n'), () => {
+      this.extra.textContent = '';
+      for (const e of extras) {
+        const b = el('span', 'x-badge', e.icon ? `<i>${e.icon}</i>` : '');
+        b.append(el('em'));
+        b.lastChild.textContent = String(e.text);
+        this.extra.append(b);
+      }
+    });
     this._set('time', Math.floor((k.finished ? k.finishTime : race.time) * 100), (v) => { this.time.textContent = formatTime(v / 100); });
+    // Item slot: the roulette spins over the items this kart can get; a badge counts uses or seconds left.
     let icon = '';
-    if (k.rollT > 0) icon = 'roll' + (Math.floor(race.clock / 0.09) % ITEMS.length);
-    else if (k.item) icon = k.item;
+    if (k.rollT > 0) {
+      if (!this._pool) this._pool = race.items.pool(k);
+      const n = this._pool.length;
+      if (n) icon = 'roll:' + this._pool[Math.floor(race.clock / 0.09) % n].id;
+    } else {
+      this._pool = null;
+      if (k.item) icon = k.item;
+    }
     this._set('item', icon, (v) => {
-      const name = v.startsWith('roll') ? ITEMS[Number(v.slice(4))] : v;
-      this.item.innerHTML = name ? ITEM_ICONS[name] : '';
-      this.item.classList.toggle('ready', !!v && !v.startsWith('roll'));
-      this.item.classList.toggle('rolling', v.startsWith('roll'));
-      if (v.startsWith('roll')) this.game.audio.play('tick', 0.6);
+      const rolling = v.startsWith('roll:'), d = itemById(rolling ? v.slice(5) : v);
+      this.item.innerHTML = d ? d.icon : '';
+      this.item.classList.toggle('ready', !!v && !rolling);
+      this.item.classList.toggle('rolling', rolling);
+      delete this._cache.badge; // the slot was rebuilt
+      if (rolling) this.game.audio.play('tick', 0.6);
+    });
+    const left = k.itemT > 0 ? Math.ceil(k.itemT) : k.itemUses > 1 ? k.itemUses : 0;
+    this._set('badge', k.item && k.rollT <= 0 ? left : 0, (v) => {
+      if (v) { this.badge.textContent = String(v); this.item.append(this.badge); } else this.badge.remove();
     });
     this._set('wrong', k.wrongWayT > 1.2 && !k.finished, (v) => this.wrong.classList.toggle('show', v));
     this._set('boost', k.boostT > 0, (v) => this.vig.classList.toggle('show', v));
@@ -142,7 +174,9 @@ export class Hud {
     const karts = race.karts;
     for (let i = karts.length - 1; i >= 0; i--) {
       const o = karts[i];
+      if (o.out) continue;
       const x = this.mx(o.x), y = this.my(o.z);
+      g.globalAlpha = o.fx.ghost > 0 ? 0.4 : 1;
       g.beginPath();
       if (o === k) {
         g.arc(x, y, 12, 0, 6.3); g.fillStyle = '#ffe14a'; g.fill();
@@ -152,6 +186,7 @@ export class Hud {
         g.lineWidth = 3; g.strokeStyle = '#2a2433'; g.stroke();
       }
     }
+    g.globalAlpha = 1;
   }
 
   dispose() { this.el.remove(); }

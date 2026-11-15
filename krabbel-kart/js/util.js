@@ -73,6 +73,12 @@ export function makeNoise(seed) {
 
 export const col = (hex) => new THREE.Color(hex);
 
+// Blend two THREE.Colors into `out` (t = 0 gives a, t = 1 gives b).
+export function mix3(out, a, b, t) {
+  out.r = a.r + (b.r - a.r) * t; out.g = a.g + (b.g - a.g) * t; out.b = a.b + (b.b - a.b) * t;
+  return out;
+}
+
 // Merge several geometries into one flat-shaded, vertex-coloured geometry.
 // parts: [{ geo, color, matrix? }]. Each part is consumed (disposed).
 export function mergeColored(parts) {

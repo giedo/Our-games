@@ -116,4 +116,229 @@ Nothing counts as done until it passes all of these. Run them yourself before yo
 
 ## Architecture (as built)
 
-The foundation work fills in this section with the exact APIs: world packs, mode interface, item registry, kart effects, obstacle and animation hooks, string registration, and the smoke tool.
+This is what exists after the foundation work. Everything below is real code; the file paths are the source of truth. Six engineers build on it in parallel (worlds, items, modes, battle modes, obstacles, character animation), so each seam is a place where you **add a file** and flip one line in a list file.
+
+### How to avoid merge conflicts
+
+- Each list file (`js/worlds/index.js`, `js/modes/index.js`, `js/items/index.js`) has commented slots with an empty `//` line between them. Uncomment **your own** slot (import line and array entry). Do not reorder, do not add lines next to someone else's slot.
+- Strings go into your own file with `addStrings` (below). Do not edit the dictionaries in `js/i18n.js`.
+- Do not edit `race.js`, `kart.js`, `items.js`, `hud.js` for feature work unless the seam is missing something. If it is, make the smallest change, and say so in your commit message.
+- Per-frame code must not allocate (no `new`, no array literals in hot paths). Reuse objects.
+
+### Tools: smoke test and screenshots
+
+Playwright and Chromium are installed globally. Nothing to install. Software rendering is slow, so both tools use a small window and a fast clock.
+
+```
+node tools/smoke.mjs                         # every world x every registered mode, to the end, under autopilot
+node tools/smoke.mjs --world candy --mode balloon --age big --players 2
+node tools/smoke.mjs --quick                 # one world, race only
+node tools/smoke.mjs --shots /tmp/shots      # also saves PNGs (1024x640): world fly-by and mid-race chase view
+npm run smoke                                # same as node tools/smoke.mjs
+```
+
+Smoke prints one line per run: world, mode, ok/FAIL, simulated seconds, wall seconds, draw calls and triangles of one frame sampled mid race (all viewports together). It fails on any console error, page error, NaN kart position, timeout (`--timeout <s>`, default 150) or wrong number of result rows, and finishes with exit code 1. It also builds and draws the arena variant of every world once. It starts modes through `game.ui.startRace()`, the same code a player's taps end in, so a mode that is not in the menus is not tested.
+
+```
+node tools/shot.mjs --world candy --view race --at 0.5 --out /tmp/a.png          # chase view half way round lap 1
+node tools/shot.mjs --world candy --view menu --out /tmp/b.png                   # fly-by without menus
+node tools/shot.mjs --world candy --view picker --out /tmp/c.png                 # track picker (also: title players mode racer)
+node tools/shot.mjs --world neon --mode cup --view results --lang nl --out x.png # results (also: standings ceremony)
+node tools/shot.mjs --world plum --view race --at 1.2 --age big --eval "g.race.humans[0].addFx('star', 99)" --out s.png
+```
+
+`--at` is the lap fraction of the first player (0 to 3). `--eval` is an async function body with `g` = `window.__kk` (the game), run just before the picture. The race is frozen (`g.paused`) for the shot; to see effects play out, unpause inside `--eval` and wait. Useful handles on `window.__kk`: `g.race`, `g.world`, `g.timeScale` (simulation speed multiplier, used by the tools), `g.noRender` (skip drawing), `g.render()`, `g.ui.show('track')`, `g.settings`. `race.autopilot = true` lets the computer drive the human karts.
+
+Both tools take `--game <dir>` to run another checkout of the game (handy for before/after comparisons) and `?q=1` (fixed pixel ratio) is added for you.
+
+Tips: a full smoke run takes minutes. Run it in the foreground in chunks (`--mode race --world a,b`, `--mode cup`, `--arena`); background runs of the browser were seen to stall in some sandboxes. The tool fails a run when the page stops answering for 60 s.
+
+Gauntlet reminder: run smoke for `--age little` and `--age big`, with `--players 1` and `2`, before you report.
+
+### Strings
+
+```js
+import { addStrings } from '../i18n.js';
+addStrings({
+  en: { modes: { balloon: 'Balloon Battle' }, modeSub: { balloon: 'Pop the other balloons' } },
+  nl: { modes: { balloon: 'Ballonnengevecht' }, modeSub: { balloon: 'Knal de ballonnen van de rest' } },
+});
+```
+
+Deep merge into both dictionaries, call it at the top level of your own file. `t('modes.balloon')` reads nested keys. Keys used by the menus: `modes.<modeId>`, `modeSub.<modeId>` (mode picker cards), `tracks.<worldId>`, `trackSub.<worldId>` (filled in from a world pack's `strings`). Missing Dutch falls back to English, but every string must exist in both.
+
+### Settings
+
+`js/store.js` DEFAULTS: `age` (`'little' | 'big'`, read it with `ageOf(settings)` / `isLittle(settings)` from `js/age.js`), `mode` (id of the mode played last), `modeOpts` (`modeOpts[modeId][key]` = chosen option), `track`, `difficulty`, `picks`. `race.age` is the age the race runs with.
+
+### Menu flow
+
+title, players (1 or 2, plus the age choice), mode picker (cards from the mode registry, filtered by age; tapping a card goes on), racer picker, track picker (world cards in a row that scrolls sideways when there are many, the mode's options, speed), start. `UI.currentMode()` is the mode class chosen, `UI.modeOpts(M)` the resolved options.
+
+### World packs: `js/worlds/`
+
+A pack is a file with a default-exported object. `js/worlds/_example.js` is a complete minimal one (not registered); copy it. Register in `js/worlds/index.js`: uncomment `import candy from './candy.js';` and `candy,` in `WORLD_PACKS`.
+
+```js
+export default {
+  id: 'candy',
+  track: { seed, scale, width, points, itemRows, boostPads, obstacles },   // like TRACKS in js/tracks.js
+  theme(seed, bounds, kit) { return { sky, fog, light, water, road, clouds, ambient, blendNear, blendFar, height, color, ...optional }; },
+  scenery(w, kit) { /* build the dressing into w.scene */ },
+  song: { bpm, style, lead, chords, melody },     // see js/audio.js SONGS
+  style: { kick, snare, hat, hatVol, bass, bassLen, comp, level },   // optional rhythm style, see STYLES in js/audio.js
+  chip: 'linear-gradient(...)',                    // CSS background of the track card
+  strings: { en: { name, sub }, nl: { name, sub } },
+  skins: { roller: (kit) => THREE.Object3D },      // optional obstacle looks
+};
+```
+
+Rules:
+
+- Import only vendor three.js and `../util.js` at the top level of a pack file. Everything else arrives through `kit` (no import cycles).
+- `kit` (`KIT` in `js/scenery.js`) holds `THREE`, everything exported by `js/util.js` (`makeNoise`, `mix3`, `smoothstep`, `clamp`, `lerp`, `mergeColored`, `mat4`, `makeCanvas`, `canvasTexture`, `mulberry32`, ...), the placement helpers `scatter(w, opts)`, `alongTrack(w, opts)`, `instanced(w, geo, material, list, shadowRadius)`, `tulipFields`, `sprinkle`, `balloons`, `jitter`, and the model builders `geoRoundTree geoPine geoPalm geoCactus geoRock geoBush geoHouse geoHoodoo geoSnowman geoIgloo geoCabin geoBalloon geoSailboat geoLighthouse geoArch`. Need another helper? Export it from `js/scenery.js` and add it to `KIT`.
+- `scenery(w, kit)` runs after the gantry and the corner signs and tyre walls (`js/props.js`) were built and before the shadow blobs. `w.mats.scenery`, `w.mats.sceneryDouble`, `w.mats.sceneryNoFog` are ready-made vertex-colour materials; `w.rnd` is the world's seeded random, `w._shadows` collects blob shadows (`instanced` fills it when you pass a shadow radius).
+- Everything must be deterministic (use `w.rnd`, `makeNoise(seed)`, not `Math.random`).
+- Theme optional fields (defaults keep the four built-in worlds as they were): `terrainShadow`, `night` (bluish scenery shadows), `detail: { strokes, kind: 'blades' | 'ripples' | 'sparkle' | 'custom', draw(g, size, rnd) }` (marks on the ground texture), `water.ocean` (endless ocean), `water: null` (no water), `ambient.cfg` (`{ n, box, size, vel, op }` for the floating particles), `clouds` with `count: 0` for none, and `onBuilt(world, kit)`, called at the very end of `new World()`, to restyle materials, e.g. a glowing road: `world.scene.traverse(...)`.
+- Music: `song.lead` is one of `whistle square trumpet pan bell brass`; `song.style` is a built-in style name (`soft bounce gallop calypso sleigh march`) or, when the pack has `style`, the pack id. The tune plays for that world id (and for its arena variant).
+- `TRACKS` (in `js/tracks.js`) is the four built-ins plus the pack tracks (`{ ...pack.track, id: pack.id }`). The Grand Prix does not use `TRACKS`, it uses `js/cups.js`.
+
+`World` extras: `world.def` (the track def), `world.themeId` (look to use: `def.theme || def.id`), `world.theme`, `world.packSkins` (the pack's obstacle skins, or `{}`).
+
+Arena variants: `arenaDef(worldId)` in `js/tracks.js` returns `{ id: worldId + '-arena', theme: worldId, arena: true, seed, width: 30, points: <ring of radius 55>, itemRows, boostPads: [], obstacles: [] }`. It is a normal closed track (so lap maths, `track.locate`, minimap, items all work) with the same look and landscape. The battle engineer refines it (radius, walls, spawn spots). `game.buildWorld(def)` takes an id or a def; `startRace` builds the arena variant for modes with `arena = true`.
+
+### Game modes: `js/modes/`
+
+`Mode` in `js/modes/base.js` is a plain lap race. `race.js` is the classic race (subclass with options), `cup.js` the Grand Prix card. Register in `js/modes/index.js` (`MODES` array, `modeById(id)` returns the class, falls back to `race`).
+
+Class level (read by the menus, set with `Object.assign(MyMode, {...})` after the class):
+
+| field | meaning | default |
+| --- | --- | --- |
+| `id` | unique id, also settings key and string key | |
+| `icon` | inline svg string for the mode card | |
+| `ages` | age groups that see it | `['little','big']` |
+| `arena` | race on the arena variant of the chosen world | false |
+| `teams` | uses `kart.team` | false |
+| `needsTrack` | false hides the world cards (runs on `settings.track`) | true |
+| `series` | multi-race flow run by main.js (Grand Prix); not raced itself | false |
+| `karts` | karts in total, players included | 8 |
+| `static options(settings)` | `[{ key, label, values: [[value, label], ...], default }]`, drawn as segmented controls on the track screen, stored in `settings.modeOpts[id][key]`, handed to the mode as `this.opts` | `[]` |
+
+Instance level (override what you need; every hook has a working default):
+
+| hook | what | default |
+| --- | --- | --- |
+| `constructor(race, opts)` | `this.race`, `this.opts` | |
+| `lapCount()` | laps that count as finished; `Infinity` = never finish by laps | `opts.laps \|\| 3` |
+| `allowRubberBand` (getter) | catch-up speed for computer racers | true |
+| `setup()` | once, after karts exist (they are in `race.karts`, humans in `race.humans`): grid, teams, balloons | computer racers in front, players behind |
+| `update(dt)` | every step, all states (check `race.state`) | counts `endT` |
+| `onLap(kart)` | a lap was completed (not the last) | HUD "Lap n" message |
+| `onFinish(kart)` | `kart.finished` just became true | finish message, confetti, `win`/`lose` gesture |
+| `onHit(victim, attacker, cause)` | a kart really got hit (see `kart.hit`); attacker may be null | nothing |
+| `rank()` | set `kart.place` (1 = best) and `race.sorted` | by finish time, then progress; `out` last |
+| `isOver()` | stop the race | all humans home, or 60 s after the first |
+| `results()` | `{ headline, rows }`, best first. Row: `{ place, name, human, playerIndex, driver, index, time?, team?, extra? }`. `time` is seconds or null (omit to hide the column), `team` 0 or 1 colours the row, `extra` is `[{ text, cls? }]` more columns | rows by place |
+| `hudInfo(kart)` | `{ place: text \| null, lap: text \| null, extra: [{ icon, text }] }`; the first number in a text is drawn bold; null hides it | ordinal place, `Lap n/N` |
+| `itemPool(kart)` | allowed item ids or null | null |
+| `aiGoal(kart)` | `{ x, z }` or null. Computer racers (and human karts under autopilot) steer there instead of following the racing line | null |
+| `dispose()` | clean up | |
+
+Race calls the hooks: `Race.update` runs `mode.update`, then `aiGoal`, the kart controls, bumping, `rank()`, items, obstacles, particles, cameras, HUDs, and asks `isOver()` while `race.state === 'racing'`. The state machine (`intro`, `countdown`, `racing`, `ending`, `done`) stays in Race; after `ending` (4.2 s) it calls `game.onRaceDone(mode.results())`.
+
+```js
+// js/modes/time.js
+import { Mode } from './base.js';
+import { addStrings } from '../i18n.js';
+addStrings({ en: { modes: { time: 'Time Trial' }, modeSub: { time: 'Beat your best time' } }, nl: { modes: { time: 'Tijdrit' }, modeSub: { time: 'Verbeter je tijd' } } });
+class TimeTrial extends Mode {
+  isOver() { return this.race.humans[0].finished; }
+}
+Object.assign(TimeTrial, { id: 'time', ages: ['big'], karts: 1, icon: '<svg ...></svg>' });
+export default TimeTrial;
+```
+
+Start a race from code: `game.startRace({ mode: 'time', opts: {}, trackId: 'meadow', players: [{ driver, vehicle }], difficulty: 'normal' })`. Opponents are picked for you (`mode.karts` minus the players).
+
+Grand Prix: `js/cups.js` has `CUPS = [{ id, tracks: [worldIds] }]`. `game.startCup({ players, difficulty, cup: id })` runs the series in main.js (`startCupRace`, `onRaceDone` hands out points `CUP_POINTS`, standings, podium ceremony). Every race of it is a `race` mode race. The modes engineer adds the named cups and the cup picker.
+
+### Items: `js/items.js`, `js/items/`
+
+An item is a definition passed to `registerItem` (the four built-ins are at the bottom of `js/items.js`; read them first). New items live in `js/items/<name>.js`; switch them on in `js/items/index.js` (main.js loads that file, so registration happens before the first race).
+
+```js
+// js/items/turbo3.js
+import { registerItem } from '../items.js';
+registerItem({
+  id: 'turbo3',
+  icon: '<svg viewBox="0 0 64 64">...</svg>',          // shown in the HUD
+  ages: ['little', 'big'],                              // default both
+  weight(kart, f, race) { return 1 + 3 * f; },          // chance in the box: f = 0 for the leader .. 1 for the last kart
+  uses: 3,                                              // presses before it is gone (default 1); HUD shows a count badge
+  use(sys, kart) { kart.boost(1.2, 1.4); sys.race.sfx('boost', kart); },   // return false to keep the item (no target)
+  aiWants(kart, ctx) { return ctx.kmax < 0.012 || ctx.hold > 5; },         // ctx = { kmax: bend ahead, hold: seconds held, race }
+});
+```
+
+Also: `held: seconds` instead of `uses` makes an item usable as often as you like for that long after the first press (HUD shows the seconds left). `kart.item` is the id, `kart.itemUses`, `kart.itemT` the counters.
+
+`ItemSystem` (`race.items`, called `sys` in `use`):
+
+- `pool(kart)` definitions this kart may get (age + `mode.itemPool`), `pick(kart)` weighted random id, `give(kart, id)` fills the slot at once, `use(kart)`.
+- `sys.boxesEnabled = false` hides the item boxes (modes).
+- Things: `sys.add(thing)` where `thing = { update(dt, sys) -> false when finished, dispose(), kind?, hazard?, s?, lat? }`. Projectiles, hazards and timed effects go here; the loop is not yours to edit. `sys.remove(thing)`, `sys.ofKind(kind)`. A thing with `hazard = true` and track coordinates `s` (sample index) and `lat` (sideways metres) is avoided by computer racers; `sys.hazardsAhead(kart, metres)` lists them (that is how the paint puddle works, see `Puddle`).
+- `sys.hitKartsNear(x, y, z, radius, owner, opts)` hits every kart within a flat radius (skipping the owner, karts that are out, finished or immune) with `kart.hit({ by: owner, cause: opts.cause, soft, flat })` and returns the karts touched. Options: `cause, soft, flat, first, skipCool, finished, ky, dy`. See the comment in the code.
+- `sys.spawnMesh(geo, mat, x, y, z)` / `sys.removeMesh(mesh)`, `sys.res(key, factory)` shared geometry/material made once per race and disposed with it, `sys.clock` the race clock, `sys.world`, `sys.race`.
+- Roulette: the HUD spins over `sys.pool(kart)`.
+
+`Plane` and `Puddle` in `js/items.js` are working examples of things.
+
+### Kart capabilities: `js/kart.js`
+
+Call these instead of editing physics.
+
+- **Effects**: `kart.fx` is `{ name: secondsLeft }`; `kart.addFx(name, seconds)` (never shortens a running one), `kart.hasFx(name)`, `kart.clearFx(name)`. They count down in `kart.update` and are deleted at 0. Reserved names with built-in behaviour:
+
+| name | effect |
+| --- | --- |
+| `star` | cannot be hit, +18% top speed, rainbow glow and sparkles, bumping a kart spins it |
+| `tiny` | model scale 0.5, top speed x0.72 |
+| `giant` | model scale 1.7, +8% speed, cannot be hit, touching a kart flattens it (`flat`) |
+| `flat` | model squashed flat, top speed x0.5 (set by being hit with `flat: true`, about 1.5 s) |
+| `ghost` | see-through, cannot be hit, no kart-kart bumping, dimmed on the minimap |
+| `frozen` | no steering or gas, slides to a stop (add the ice look yourself) |
+| `auto` | driven by `aiControl` at `kart.autoSpeed` times top speed (set `autoSpeed` first, default 1), cannot be hit, ignores the grass slow-down; a human still decides about the item button |
+| `slip` | steering strongly reduced |
+| `slow` | top speed x `kart.slowMul` (default 0.7) |
+
+  The model scale (`kart.scaleVis`) and squash (`kart.flatVis`) are damped, never jump. Ghost and star copy the drawing's materials per kart while active (the originals are shared between karts), and give them back after.
+- `kart.stars` (default 0): each adds 1.2% top speed, up to 10. Nothing hands them out yet.
+- `kart.hit(opts)` with `{ by: Kart | null, cause: string, soft: bool, flat: bool }`; plain `kart.hit()` still works. Returns true when the kart really was hit (spun or flattened); then `race.mode.onHit(victim, attacker, cause)` runs and the `hit` gesture plays. Not hit (returns false): out, in the hit cool-down, finished, immune (star, giant, ghost, auto), or a shield pops (the shield is used up). `soft: true` only costs a little speed and never spins, never calls `onHit` (for the little age group's obstacles).
+- `kart.launch(vy)` throws the kart upward; `kart.bump(nx, nz, strength)` pushes it sideways (m/s, fades out in a moment).
+- `kart.out` / `kart.setOut(true)`: removed from play. No physics, model hidden, no item boxes, not bumped, left off the minimap, and its camera orbits it like a finished kart, ranked after all active karts by the default `rank()`. `kart.team` (null, 0 or 1) is just storage for modes and the results screen.
+- `kart.aiGoal` is set by Race every frame from `mode.aiGoal(kart)`; `aiControl` then drives towards it, keeping the target on the road band and following the road the shorter way round when it is far along the loop, in either direction.
+- `kart.gesture(name)` forwards to the animator. Fired by the code at: `throw` (item used), `hit` (spun), `win`/`lose` (finished, place <= 3 is win), `boost` (every `kart.boost`), `overtake` (a human gains a place, at most every 1.5 s).
+- Useful state: `x y z dir speed`, `s idx lat progress lap` (track position, `progress` counts samples since the grid), `place`, `finished finishTime`, `grounded`, `offroad`, `boostT shieldT spinT hitCool`, `model`.
+
+Pitfalls: `hit()` is ignored for 2.4 s after a spin (`hitCool`); hitting a ghost does nothing; `kart.update` returns early when `out`. Race only calls `mode.aiGoal` for karts that are not out.
+
+### Obstacles: `js/obstacles.js`
+
+`ObstacleSystem` is built by Race after the ItemSystem (`race.obstacles`), `update(dt, time)` runs every step, `dispose()` with the race. It does nothing yet. Read `race.world.def.obstacles` (`[{ kind, at, lat, skin, ... }]`, `at` = lap fraction), `race.world.packSkins[name](kit)` for a pack's looks (kit: import `KIT` from `js/scenery.js`), `race.age` (little: use `kart.hit({ soft: true })`, `kart.bump`, `kart.launch` only), and `race.items.add(thing)` if you want the item system's loop and AI avoidance (`hazard`) for an obstacle.
+
+### Character animation: `js/anim.js`
+
+`Animator(model, opts)` is created for every racer model: in `Kart` (`kart.anim`), the menu preview (`game.preview.animator`, `play('select')` when the picked racer changes) and the podium racers (`actor.animator`, `play('win')` for the top three). `update(dt, time, state)` runs every frame after the owner set its own transforms (state is the Kart in a race, null elsewhere); `play(name, opts)` starts a gesture; `dispose()`.
+
+The model (from `buildRacerModel`, `js/racerModel.js`) is `root > tilt > body > anim > (vehicleMesh, pivot > driverAnim > driverMesh)` with the shield on `body`. `model.anim` (the whole racer) and `model.driverAnim` (just the drawing of the driver) are identity groups reserved for the animator: write their position, rotation and scale absolutely every frame and nothing else fights you. `body` and `pivot` are set by the kart/menu/podium code every frame (absolute assignment), so add to them (read, then write) or avoid them. Gestures: `select idle throw win lose hit overtake boost`. Emote particles: `race.particles.emit/burst` (see `js/particles.js`); there is no particle system for menu or podium racers yet.
+
+### Pitfalls
+
+- Pack files and mode/item files must not import from `main.js`, `ui.js` or `race.js`. Modes and items get the game through `this.race` / `sys`.
+- `Race` is rebuilt for every race: keep state in the mode instance or on the race, never in module variables.
+- Materials of the racers' drawings are shared between karts (and with the menu preview). Never change them in place; clone them (see `Kart._takeMats`).
+- `world.update(dt)` runs once per step before `race.update`; things in `world.updaters` accumulate, so do not expect them to be deterministic across frame rates.
+- Draw-call budget: about 60 per view, 500k triangles. Smoke prints both; with two players they are for both views together.
+- The one-file build (`npm run build:single`, esbuild) bundles `main.js` and its imports: new files are picked up automatically, but do not use dynamic `import()` or top-level `await` in game code.
+- No names, characters or art from commercial games anywhere (code, strings, docs).

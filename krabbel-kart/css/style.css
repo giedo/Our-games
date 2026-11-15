@@ -123,8 +123,11 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 /* track picker */
 .trackpick { justify-content: space-between; }
 .track-bottom { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.track-cards { display: flex; gap: clamp(8px, 1.6vw, 16px); justify-content: center; width: 100%; }
-.card.track { flex: 1; max-width: 230px; min-width: 0; padding: 8px 8px 10px; gap: 4px; border-width: 4px; border-radius: 20px; box-shadow: 0 5px 0 var(--ink); }
+/* A row that scrolls sideways when there are more worlds than fit; with few worlds the auto margins centre it. */
+.track-cards { display: flex; gap: clamp(8px, 1.6vw, 16px); width: 100%; padding: 14px 6px 18px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; touch-action: pan-x; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.track-cards > :first-child { margin-left: auto; }
+.track-cards > :last-child { margin-right: auto; }
+.card.track { flex: 0 0 clamp(128px, 22vw, 230px); scroll-snap-align: center; min-width: 0; padding: 8px 8px 10px; gap: 4px; border-width: 4px; border-radius: 20px; box-shadow: 0 5px 0 var(--ink); }
 .card.track .chip { display: block; width: 100%; height: clamp(34px, 9vh, 74px); border-radius: 12px; border: 3px solid var(--ink); }
 .card.track b { font-size: clamp(14px, 2.6vh, 20px); }
 .card.track small { font-size: 13px; opacity: .8; }
@@ -142,6 +145,21 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 .track-cards.cup .card.track { background: #fff; transform: none; box-shadow: 0 5px 0 var(--ink); }
 .track-cards.cup .card.track.on { background: #fff3b8; }
 
+/* age choice (players screen) and mode picker */
+.head.small { font-size: clamp(18px, 3.4vh, 28px); -webkit-text-stroke-width: 6px; }
+.age-row { display: flex; gap: clamp(10px, 2.5vw, 22px); justify-content: center; }
+.card.age { flex-direction: row; gap: 10px; padding: clamp(6px, 1.6vh, 12px) clamp(16px, 3vw, 28px); border-width: 4px; border-radius: 999px; box-shadow: 0 5px 0 var(--ink); font-size: clamp(17px, 3vh, 24px); }
+.card.age .ic svg { width: clamp(26px, 5vh, 40px); height: clamp(26px, 5vh, 40px); }
+.card.age.on { background: var(--go); transform: translateY(-3px); box-shadow: 0 8px 0 var(--ink); }
+.mode-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(12px, 3vh, 24px) clamp(10px, 2vw, 22px); max-width: min(94vw, 980px); padding-top: 8px; }
+.card.mode { position: relative; width: clamp(130px, 21vw, 200px); padding: clamp(8px, 1.8vh, 14px) 10px clamp(10px, 2vh, 16px); font-size: clamp(16px, 2.8vh, 22px); }
+.card.mode:nth-child(odd) { transform: rotate(-1.2deg); }
+.card.mode:nth-child(even) { transform: rotate(1.2deg); }
+.card.mode .ic svg { width: clamp(40px, 11vh, 76px); height: clamp(40px, 11vh, 76px); }
+.card.mode small { font-size: 13px; font-weight: 600; opacity: .8; }
+.card.mode.on { background: #fff3b8; }
+.card.mode .last { position: absolute; top: -12px; right: -8px; font-style: normal; font-size: 12px; font-weight: 700; color: #fff; background: var(--pink); border: 3px solid var(--ink); border-radius: 999px; padding: 0 9px; -webkit-text-stroke: 0; }
+
 /* results */
 .res-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
 .res-list li { display: flex; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 3px 12px 3px 6px; font-weight: 600; font-size: clamp(15px, 2.6vh, 19px); }
@@ -152,6 +170,9 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 .res-list img { width: clamp(26px, 5vh, 40px); height: clamp(26px, 5vh, 40px); object-fit: contain; }
 .res-list .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .res-list .tm { font-variant-numeric: tabular-nums; opacity: .8; }
+.res-list li.team0 { box-shadow: inset 7px 0 0 #ff6b6b; }
+.res-list li.team1 { box-shadow: inset 7px 0 0 #4fb8ff; }
+.res-list .xc { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
 .res-list .pt { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; color: #1f8f3a; }
 .res-list .pt.big { min-width: 70px; color: var(--ink); }
 
@@ -198,6 +219,13 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 .hud-pos[data-p="1"] { color: #ffd21f; } .hud-pos[data-p="2"] { color: #e8eef5; } .hud-pos[data-p="3"] { color: #ffae6b; }
 .hud-col { display: flex; flex-direction: column; gap: 2px; color: #fff; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; }
 .hud-lap { font-size: clamp(18px, 3.6vh, 28px); }
+.hud-pos.none, .hud-lap.none { display: none; }
+.hud-extra { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.x-badge { display: inline-flex; align-items: center; gap: 4px; font-size: clamp(16px, 3vh, 24px); }
+.x-badge i { width: 1.25em; height: 1.25em; }
+.x-badge i svg { width: 100%; height: 100%; }
+.x-badge em { font-style: normal; }
+.item-badge { position: absolute; right: -9px; bottom: -9px; min-width: 30px; height: 30px; padding: 0 7px; display: grid; place-items: center; background: var(--ink); color: #fff; border: 3px solid #fff; border-radius: 999px; font-size: 17px; line-height: 1; }
 .hud-time { font-size: clamp(15px, 2.8vh, 22px); font-variant-numeric: tabular-nums; }
 .hud-map { position: absolute; right: calc(10px + var(--safe-r)); top: calc(8px + var(--safe-t)); width: clamp(96px, 22vh, 158px); height: clamp(96px, 22vh, 158px); }
 .hud.split.p0 .hud-map { right: 8px; }
@@ -314,8 +342,7 @@ body.portrait.touch:not(.portrait-ok) #rotate-hint { display: grid; }
 
 /* narrow windows */
 @media (max-width: 600px) {
-  .track-cards { flex-wrap: wrap; }
-  .card.track { flex: 1 1 40%; }
+  .card.track { flex-basis: 38vw; }
   .card.track small { display: none; }
   .racer-panel h3 { display: none; }
   .bar .btn { font-size: 16px; padding: 8px 12px; }

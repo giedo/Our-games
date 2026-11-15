@@ -1,11 +1,14 @@
 // Low-poly scenery: trees, windmills, tulip fields, rock arches, igloos and friends.
+// The helpers are exported (and bundled in KIT at the bottom) so world packs can use them.
 import * as THREE from '../vendor/three.module.min.js';
+import * as UTIL from './util.js';
 import { mergeColored, mat4, lerp, TAU, makeCanvas, canvasTexture, clamp } from './util.js';
 import { buildTrackProps } from './props.js';
+import { packById } from './worlds/index.js';
 
 const V3 = THREE.Vector3;
 
-function jitter(geo, amount, rnd) {
+export function jitter(geo, amount, rnd) {
   // Displace vertices consistently (same position => same offset) for a rocky look.
   const p = geo.attributes.position;
   const cache = new Map();
@@ -20,7 +23,7 @@ function jitter(geo, amount, rnd) {
 
 // ---------- model factories (each returns one merged, vertex-coloured geometry) ----------
 
-function geoRoundTree(rnd, greens) {
+export function geoRoundTree(rnd, greens) {
   const parts = [{ geo: new THREE.CylinderGeometry(0.32, 0.5, 2.6, 6), color: 0x8a5a3a, matrix: mat4(0, 1.3, 0) }];
   const blobs = [[0, 4.2, 0, 2.3], [1.3, 3.4, 0.4, 1.5], [-1.1, 3.5, -0.6, 1.6], [0.2, 5.6, -0.2, 1.4]];
   blobs.forEach((b, i) => {
@@ -29,7 +32,7 @@ function geoRoundTree(rnd, greens) {
   return mergeColored(parts);
 }
 
-function geoPine(rnd, green, snowy) {
+export function geoPine(rnd, green, snowy) {
   const parts = [{ geo: new THREE.CylinderGeometry(0.28, 0.42, 1.8, 6), color: 0x6b4630, matrix: mat4(0, 0.9, 0) }];
   const tiers = [[2.4, 3.0, 2.4], [1.9, 2.7, 4.1], [1.3, 2.5, 5.8]];
   for (const [r, h, y] of tiers) {
@@ -39,7 +42,7 @@ function geoPine(rnd, green, snowy) {
   return mergeColored(parts);
 }
 
-function geoPalm(rnd) {
+export function geoPalm(rnd) {
   const parts = [];
   let x = 0, y = 0;
   for (let k = 0; k < 6; k++) {
@@ -60,7 +63,7 @@ function geoPalm(rnd) {
   return mergeColored(parts);
 }
 
-function geoCactus() {
+export function geoCactus() {
   const g = 0x4f9a55, g2 = 0x3f8548;
   return mergeColored([
     { geo: new THREE.CylinderGeometry(0.55, 0.6, 4.2, 7), color: g, matrix: mat4(0, 2.1, 0) },
@@ -74,20 +77,20 @@ function geoCactus() {
   ]);
 }
 
-function geoRock(rnd, colors) {
+export function geoRock(rnd, colors) {
   const g = jitter(new THREE.IcosahedronGeometry(1, 1), 0.45, rnd);
   g.scale(1, 0.75, 1);
   return mergeColored([{ geo: g, color: colors[0] }]);
 }
 
-function geoBush(rnd, colors) {
+export function geoBush(rnd, colors) {
   return mergeColored([
     { geo: jitter(new THREE.IcosahedronGeometry(1, 1), 0.3, rnd), color: colors[0], matrix: mat4(0, 0.6, 0, 0, 0, 0, 1, 0.8, 1) },
     { geo: jitter(new THREE.IcosahedronGeometry(0.7, 0), 0.2, rnd), color: colors[1], matrix: mat4(0.8, 0.45, 0.3) },
   ]);
 }
 
-function geoHouse(roof) {
+export function geoHouse(roof) {
   const r = new THREE.ConeGeometry(4.9, 3, 4); r.rotateY(Math.PI / 4);
   return mergeColored([
     { geo: new THREE.BoxGeometry(6.2, 3.6, 5.2), color: 0xfff4e0, matrix: mat4(0, 1.8, 0) },
@@ -99,7 +102,7 @@ function geoHouse(roof) {
   ]);
 }
 
-function geoHoodoo(rnd, colors) {
+export function geoHoodoo(rnd, colors) {
   const parts = [];
   let y = 0;
   const n = 4 + Math.floor(rnd() * 3);
@@ -111,7 +114,7 @@ function geoHoodoo(rnd, colors) {
   return mergeColored(parts);
 }
 
-function geoSnowman() {
+export function geoSnowman() {
   return mergeColored([
     { geo: new THREE.IcosahedronGeometry(1.0, 1), color: 0xffffff, matrix: mat4(0, 0.85, 0) },
     { geo: new THREE.IcosahedronGeometry(0.72, 1), color: 0xf4f8ff, matrix: mat4(0, 2.15, 0) },
@@ -126,7 +129,7 @@ function geoSnowman() {
   ]);
 }
 
-function geoIgloo() {
+export function geoIgloo() {
   const dome = new THREE.SphereGeometry(3.2, 9, 5, 0, TAU, 0, Math.PI / 2);
   const door = new THREE.CylinderGeometry(1.25, 1.25, 2, 8, 1, false, 0, Math.PI); door.rotateZ(Math.PI / 2); door.rotateY(Math.PI / 2);
   return mergeColored([
@@ -136,7 +139,7 @@ function geoIgloo() {
   ]);
 }
 
-function geoCabin() {
+export function geoCabin() {
   const r = new THREE.ConeGeometry(4.6, 2.6, 4); r.rotateY(Math.PI / 4);
   return mergeColored([
     { geo: new THREE.BoxGeometry(5.6, 3.2, 4.6), color: 0x8a5a3c, matrix: mat4(0, 1.6, 0) },
@@ -146,7 +149,7 @@ function geoCabin() {
   ]);
 }
 
-function geoBalloon(a, b) {
+export function geoBalloon(a, b) {
   const env = new THREE.SphereGeometry(5, 12, 9).toNonIndexed();
   env.scale(1, 1.18, 1);
   const p = env.attributes.position;
@@ -170,7 +173,7 @@ function geoBalloon(a, b) {
   ]);
 }
 
-function geoSailboat(sail) {
+export function geoSailboat(sail) {
   const hull = new THREE.SphereGeometry(1, 8, 4, 0, TAU, Math.PI / 2, Math.PI / 2);
   const tri = new THREE.BufferGeometry();
   tri.setAttribute('position', new THREE.Float32BufferAttribute([0, 0.6, 2.6, 0, 8.2, 0.2, 0, 0.6, -0.2, 0, 0.6, -0.5, 0, 7, -0.5, 0, 0.6, -3.2], 3));
@@ -182,7 +185,7 @@ function geoSailboat(sail) {
   ]);
 }
 
-function geoLighthouse() {
+export function geoLighthouse() {
   const parts = [];
   const bands = 5;
   for (let k = 0; k < bands; k++) {
@@ -194,7 +197,7 @@ function geoLighthouse() {
   return mergeColored(parts);
 }
 
-function geoArch(R, tube, rnd, colors) {
+export function geoArch(R, tube, rnd, colors) {
   const g = new THREE.TorusGeometry(R, tube, 7, 14, Math.PI);
   jitter(g, tube * 0.42, rnd);
   g.scale(1, 0.82, 1.5);
@@ -215,7 +218,7 @@ function geoArch(R, tube, rnd, colors) {
 
 // ---------- placement helpers ----------
 
-function scatter(w, o) {
+export function scatter(w, o) {
   const out = [], rnd = w.rnd, tr = w.track, b = tr.bounds, info = {};
   const R = o.radius || 430;
   const minD = o.minD !== undefined ? o.minD : tr.limit + 4;
@@ -238,7 +241,7 @@ function scatter(w, o) {
 }
 
 // Random spots at a given sideways distance from the road.
-function alongTrack(w, o) {
+export function alongTrack(w, o) {
   const out = [], rnd = w.rnd, tr = w.track, p = new V3(), info = {};
   for (let k = 0; k < o.count; k++) {
     const s = (o.even ? (k + (o.phase || 0)) / o.count : rnd()) * tr.n;
@@ -256,7 +259,7 @@ function alongTrack(w, o) {
 }
 
 const dummy = new THREE.Object3D();
-function instanced(w, geo, material, list, shadowR) {
+export function instanced(w, geo, material, list, shadowR) {
   if (!list.length) { geo.dispose(); return null; }
   const m = new THREE.InstancedMesh(geo, material, list.length);
   list.forEach((it, i) => {
@@ -285,7 +288,7 @@ function buildShadows(w) {
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   const tex = canvasTexture(c);
   const geo = new THREE.PlaneGeometry(2, 2); geo.rotateX(-Math.PI / 2);
-  const night = w.theme.id === 'snow';
+  const night = !!w.theme.night;
   const mat = new THREE.MeshBasicMaterial({ map: tex, color: night ? 0x0a1a40 : 0x10240a, transparent: true, opacity: night ? 0.2 : 0.24, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
   const m = new THREE.InstancedMesh(geo, mat, list.length);
   const up = new V3(0, 1, 0), nrm = new V3(), q = new THREE.Quaternion(), sc = new V3(), pos = new V3(), mtx = new THREE.Matrix4();
@@ -371,7 +374,7 @@ function gantry(w) {
 }
 
 // Bulb fields the Dutch way: long bands of one colour, with buds poking out.
-function tulipFields(w, fields) {
+export function tulipFields(w, fields) {
   const tr = w.track, rnd = w.rnd, p = new V3(), q = new V3(), info = {};
   const palette = [0xff3b4e, 0xffd21f, 0xff7ac0, 0xff8a1f, 0xb05cff, 0xffffff, 0xff4fa0, 0xffe45e].map((c) => new THREE.Color(c));
   const leaf = new THREE.Color(0x2f8a3a), tmp = new THREE.Color();
@@ -429,7 +432,7 @@ function tulipFields(w, fields) {
 }
 
 // Tiny wild flowers / pebbles sprinkled along the verge.
-function sprinkle(w, colors, count, size = 1) {
+export function sprinkle(w, colors, count, size = 1) {
   const tr = w.track, rnd = w.rnd, p = new V3(), info = {}, list = [];
   const cols = colors.map((c) => new THREE.Color(c));
   for (let i = 0; i < count * 3 && list.length < count; i++) {
@@ -446,7 +449,7 @@ function sprinkle(w, colors, count, size = 1) {
   instanced(w, mergeColored([{ geo: g, color: 0xffffff }]), w.mats.scenery, list);
 }
 
-function balloons(w, n, palette) {
+export function balloons(w, n, palette) {
   const b = w.track.bounds, rnd = w.rnd;
   for (let i = 0; i < n; i++) {
     const [ca, cb] = palette[i % palette.length];
@@ -651,6 +654,18 @@ function snow(w) {
   if (pool) pool.renderOrder = 0.6;
 }
 
+// Everything a world pack needs, handed to its theme() and scenery() functions so packs
+// never import game modules themselves: THREE, all of util.js (noise, colours, mergeColored,
+// mat4, canvas helpers...), the placement helpers and the model builders above.
+export const KIT = Object.assign({}, UTIL, {
+  THREE,
+  jitter, scatter, alongTrack, instanced, tulipFields, sprinkle, balloons,
+  geoRoundTree, geoPine, geoPalm, geoCactus, geoRock, geoBush, geoHouse, geoHoodoo, geoSnowman, geoIgloo,
+  geoCabin, geoBalloon, geoSailboat, geoLighthouse, geoArch,
+});
+
+const BUILTIN = { meadow, canyon, island, snow };
+
 export function buildScenery(w) {
   w._shadows = [];
   w.mats = {
@@ -660,6 +675,8 @@ export function buildScenery(w) {
   };
   gantry(w);
   buildTrackProps(w);
-  ({ meadow, canyon, island, snow })[w.theme.id](w);
+  const pack = packById(w.theme.id);
+  if (pack) pack.scenery(w, KIT);
+  else (BUILTIN[w.theme.id] || meadow)(w);
   buildShadows(w);
 }

@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "build:single": "node tools/build-single.mjs"
+    "build:single": "node tools/build-single.mjs",
+    "smoke": "node tools/smoke.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

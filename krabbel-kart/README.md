@@ -8,7 +8,9 @@
 - **Your drawings become 3D racers.** Take a photo of a drawing on paper (or draw on the screen). The game removes the paper, and turns the drawing into a puffy 3D driver or a chunky 3D vehicle that you can pick like any other racer.
 - **Four worlds**: Tulip Valley (windmills and flower fields), Sunset Canyon, Coconut Bay (beaches around a volcano) and Aurora Peaks (snow under the northern lights).
 - **8 racers per race**, 3 laps. Computer racers also use your other drawings, so the kids' characters race each other.
-- **Tournament**: all four tracks in a row, points for every race, standings in between, and a podium ceremony with trophy, confetti and fireworks at the end.
+- **Grand Prix**: all four tracks in a row, points for every race, standings in between, and a podium ceremony with trophy, confetti and fireworks at the end.
+- **Age setting**: "4 to 6" (gentle, like the original game) or "7 to 10" (all items and modes), chosen on the players screen.
+- **Game modes**: Race and Grand Prix today, and a plug-in system for more (see `docs/DESIGN.md`).
 - **1 or 2 players** on one screen (split screen).
 - **Items**: turbo crayon, paint puddle, paper plane, bubble shield. Boost pads on the road.
 - **Drifting**: hold drift in a corner, the sparks change colour, let go for a boost.
@@ -59,8 +61,17 @@ js/cutout.js        paper removal              js/editor.js    drawing studio
 js/puffy.js         drawing -> 3D mesh         js/drawpad.js   draw-on-screen pad
 js/builtin.js       the built-in doodles       js/ui.js        menus
 js/props.js         grandstand, signs, tyres   js/ceremony.js  podium ceremony
+js/modes/           game modes (base, race, cup, index = the list)
+js/worlds/          world packs (index = the list, _example.js = a minimal one)
+js/items/           extra items (index = the list)    js/items.js     item boxes, registry, machinery
+js/cups.js          Grand Prix cups            js/age.js       the age setting
+js/obstacles.js     road obstacles (hook)      js/anim.js      character animation (hook)
+tools/smoke.mjs     headless test of every world and mode     tools/shot.mjs   one screenshot
+docs/DESIGN.md      the design contract and "Architecture (as built)"
 vendor/             three.js (3D library)      fonts/          Fredoka font
 ```
+
+Testing: `npm run smoke` (needs Playwright with Chromium, installed globally) plays every world and mode to the end and fails on any error; `node tools/shot.mjs --world meadow --view race --out a.png` takes a picture.
 
 No build step: the browser loads the files as they are. Change a file, reload the page.
 

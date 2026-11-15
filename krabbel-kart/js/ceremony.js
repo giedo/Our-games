@@ -3,6 +3,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { buildRacerModel, disposeRacerModel } from './racerModel.js';
 import { Particles } from './particles.js';
+import { Animator } from './anim.js';
 import { makeCanvas, canvasTexture, clamp } from './util.js';
 
 const CONFETTI = [0xff4b4b, 0xffa53c, 0xffe14a, 0x5fe06a, 0x4fb8ff, 0xb46bff, 0xff7ac0];
@@ -65,7 +66,8 @@ export class Ceremony {
     this.actors = [];
     ranking.forEach((e, i) => {
       const model = buildRacerModel(e.driver, e.vehicle);
-      const a = { model, rank: i, phase: i * 1.7, baseY: 0 };
+      const a = { model, rank: i, phase: i * 1.7, baseY: 0, animator: new Animator(model, { podium: true, rank: i }) };
+      if (i < 3) a.animator.play('win');
       if (i < 3) {
         const st = STEPS[i];
         model.root.position.set(st.x, st.h, 0);
@@ -130,6 +132,7 @@ export class Ceremony {
         m.pivot.rotation.y = -m.root.rotation.y + ang + Math.sin(t * 1.3 + a.phase) * 0.15;
         m.pivot.rotation.z = Math.sin(t * 4 + a.phase) * 0.12;
       }
+      a.animator.update(dt, t, null);
     }
     if (this.trophy) {
       this.trophy.rotation.y = t * 1.6;
@@ -163,7 +166,7 @@ export class Ceremony {
 
   dispose() {
     this.world.scene.remove(this.group);
-    for (const a of this.actors) disposeRacerModel(a.model);
+    for (const a of this.actors) { a.animator.dispose(); disposeRacerModel(a.model); }
     for (const d of this.disposables) d.dispose();
     this.particles.dispose();
   }
