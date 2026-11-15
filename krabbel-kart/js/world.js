@@ -271,13 +271,15 @@ export class World {
     const hs = new Float32Array(n1 * n1);
     const ds = new Float32Array(n1 * n1);
     const info = {};
-    const D1 = tr.halfWidth + th.blendNear, D2 = tr.halfWidth + th.blendFar;
+    const arena = !!this.def.arena; // arenas: flat island inside the ring, the landscape rises further out
+    const D1 = tr.halfWidth + (arena ? 4 : th.blendNear), D2 = tr.halfWidth + (arena ? 55 : th.blendFar);
     for (let iz = 0; iz < n1; iz++) {
       for (let ix = 0; ix < n1; ix++) {
         const x = this.tX0 + ix * cell, z = this.tZ0 + iz * cell;
         let h = th.height(x, z);
         tr.distInfo(x, z, info);
-        if (info.d < D2) {
+        if (arena && this.inIsland(x, z)) h = info.y - 0.35;
+        else if (info.d < D2) {
           const a = smoothstep(D1, D2, info.d);
           h = lerp(info.y - 0.35, h, a);
         }
@@ -361,6 +363,15 @@ export class World {
       }
     }
     return canvasTexture(c, { repeat: true });
+  }
+
+  // Arenas: is this point inside the ring (the island)? Scenery keeps clear of it.
+  inIsland(x, z) {
+    if (!this.def.arena) return false;
+    const tr = this.track, i = tr.nearestIndex(x, z);
+    if (i < 0) return false;
+    const b = tr.bounds, ax = tr.px[i] - b.cx, az = tr.pz[i] - b.cz;
+    return (x - b.cx) * ax + (z - b.cz) * az < ax * ax + az * az;
   }
 
   // Terrain height (matches the triangles of the terrain mesh exactly).
@@ -502,7 +513,7 @@ export class World {
       this.scene.add(skirt);
     }
     // Start / finish line.
-    {
+    if (!this.def.arena) {
       const c = makeCanvas(128, 64), g = c.getContext('2d');
       for (let y = 0; y < 4; y++) for (let x = 0; x < 8; x++) {
         g.fillStyle = (x + y) % 2 ? '#111' : '#fff';
@@ -540,7 +551,7 @@ export class World {
     // Item box spots.
     this.itemSpots = [];
     for (const frac of this.def.itemRows) {
-      for (const lat of [-5.4, -1.8, 1.8, 5.4]) {
+      for (const lat of this.def.itemLats || [-5.4, -1.8, 1.8, 5.4]) {
         const p = tr.posAt(frac * n, lat, new THREE.Vector3());
         this.itemSpots.push({ s: frac * n, lat, pos: p });
       }

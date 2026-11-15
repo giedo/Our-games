@@ -93,11 +93,11 @@ export class Hud {
     path(); g.strokeStyle = 'rgba(20,20,40,0.55)'; g.lineWidth = 17; g.stroke();
     path(); g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 10; g.stroke();
     // Start line tick.
-    g.strokeStyle = '#2a2433'; g.lineWidth = 5;
+    if (!tr.def.arena) { g.strokeStyle = '#2a2433'; g.lineWidth = 5;
     g.beginPath();
     g.moveTo(this.mx(tr.px[0] - tr.rx[0] * 14), this.my(tr.pz[0] - tr.rz[0] * 14));
     g.lineTo(this.mx(tr.px[0] + tr.rx[0] * 14), this.my(tr.pz[0] + tr.rz[0] * 14));
-    g.stroke();
+    g.stroke(); }
   }
 
   message(text, dur, cls = '') {
@@ -140,7 +140,8 @@ export class Hud {
         this.extra.append(b);
       }
     });
-    this._set('time', Math.floor((k.finished ? k.finishTime : race.time) * 100), (v) => { this.time.textContent = formatTime(v / 100); });
+    // A mode may show its own clock (time left): info.time is a string.
+    this._set('time', typeof info.time === 'string' ? info.time : Math.floor((k.finished ? k.finishTime : race.time) * 100), (v) => { this.time.textContent = typeof v === 'string' ? v : formatTime(v / 100); });
     // Item slot: the roulette spins over the items this kart can get; a badge counts uses or seconds left.
     let icon = '';
     if (k.rollT > 0) {
@@ -171,6 +172,9 @@ export class Hud {
     const g = this.map.getContext('2d');
     g.clearRect(0, 0, 280, 280);
     g.drawImage(this.mapBase, 0, 0);
+    // Modes may draw markers (flags, bases, stars) and colour the kart dots: mode.mapMarks() -> reused [{ x, z, color, shape }].
+    const mm = race.mode.mapMarks ? race.mode.mapMarks() : null;
+    if (mm) for (let i = 0; i < mm.length; i++) this._mark(g, mm[i]);
     const karts = race.karts;
     for (let i = karts.length - 1; i >= 0; i--) {
       const o = karts[i];
@@ -182,11 +186,22 @@ export class Hud {
         g.arc(x, y, 12, 0, 6.3); g.fillStyle = '#ffe14a'; g.fill();
         g.lineWidth = 4; g.strokeStyle = '#2a2433'; g.stroke();
       } else {
-        g.arc(x, y, o.human ? 10 : 7.5, 0, 6.3); g.fillStyle = o.human ? '#ffffff' : DOT_COLORS[i % DOT_COLORS.length]; g.fill();
+        g.arc(x, y, o.human ? 10 : 7.5, 0, 6.3); g.fillStyle = (race.mode.mapColor && race.mode.mapColor(o)) || (o.human ? '#ffffff' : DOT_COLORS[i % DOT_COLORS.length]); g.fill();
         g.lineWidth = 3; g.strokeStyle = '#2a2433'; g.stroke();
       }
     }
     g.globalAlpha = 1;
+  }
+
+  // One map marker: shape 'flag', 'ring', 'star' or 'dot'.
+  _mark(g, m) {
+    const x = this.mx(m.x), y = this.my(m.z);
+    g.fillStyle = m.color; g.strokeStyle = '#2a2433'; g.lineWidth = 3;
+    g.beginPath();
+    if (m.shape === 'ring') { g.arc(x, y, 15, 0, 6.3); g.globalAlpha = 0.45; g.fill(); g.globalAlpha = 1; g.lineWidth = 5; g.strokeStyle = m.color; g.stroke(); return; }
+    if (m.shape === 'flag') { g.moveTo(x, y + 12); g.lineTo(x, y - 14); g.lineTo(x + 16, y - 8); g.lineTo(x, y - 2); g.closePath(); g.fill(); g.stroke(); return; }
+    if (m.shape === 'star') { for (let i = 0; i < 10; i++) { const a = (i / 10) * 6.283 - 1.57, r = i % 2 ? 3 : 7; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); g.fill(); return; }
+    g.arc(x, y, 5, 0, 6.3); g.fill();
   }
 
   dispose() { this.el.remove(); }
