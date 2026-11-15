@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>My Games</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3fb8ff">
+<link rel="icon" type="image/png" href="krabbel-kart/icons/icon-192.png">
+<style>
+@font-face { font-family: "Fredoka"; src: url("krabbel-kart/fonts/fredoka-latin.woff2") format("woff2"); font-weight: 300 700; font-display: swap; }
+:root { --ink: #2a2433; --paper: #fffaf0; --go: #ffd21f; --sky: #7ec8ff; --grid: rgba(63, 184, 255, .18); }
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: "Fredoka", ui-rounded, "Comic Sans MS", system-ui, sans-serif; color: var(--ink);
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 2px, transparent 2px), linear-gradient(90deg, var(--grid) 2px, transparent 2px);
+  background-size: 34px 34px;
+  padding-block: 36px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+h1 { margin: 0; font-size: clamp(40px, 9vw, 76px); line-height: 1; font-weight: 700; }
+h1 span { display: inline-block; -webkit-text-stroke: 9px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink); }
+p.lead { margin: 0; font-size: 20px; font-weight: 500; max-width: 46ch; }
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+.game { display: flex; flex-direction: column; gap: 10px; text-decoration: none; color: inherit; background: #fff; border: 5px solid var(--ink); border-radius: 28px; box-shadow: 0 8px 0 var(--ink); padding: 14px 14px 18px; transition: transform .1s; }
+.game:hover, .game:focus-visible { transform: translateY(-4px) rotate(-1deg); outline: none; }
+.game img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 18px; border: 4px solid var(--ink); }
+.game b { font-size: 26px; }
+.game small { font-size: 16px; font-weight: 500; }
+.game i { align-self: flex-start; font-style: normal; font-weight: 700; background: var(--go); border: 4px solid var(--ink); border-radius: 999px; padding: 6px 18px; box-shadow: 0 4px 0 var(--ink); }
+.soon { display: grid; place-items: center; min-height: 200px; border: 5px dashed var(--ink); border-radius: 28px; font-size: 20px; font-weight: 600; opacity: .55; text-align: center; padding: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span style="color:#ff4b4b">M</span><span style="color:#ff9a1f">y</span> <span style="color:#5fd048">G</span><span style="color:#3fb8ff">a</span><span style="color:#9a5cff">m</span><span style="color:#ff7ac0">e</span><span style="color:#ffd21f">s</span></h1>
+  <p class="lead">Home-made games. New ideas land here.</p>
+  <div class="shelf">
+    <a class="game" href="krabbel-kart/">
+      <img src="krabbel-kart/icons/icon-512.png" alt="A drawn cat in a red race car">
+      <b>Krabbel Kart</b>
+      <small>Draw your own racers, then race them through four 3D worlds. For iPad and PC, 1 or 2 players.</small>
+      <i>Play</i>
+    </a>
+    <div class="soon">The next game idea goes here</div>
+  </div>
+</main>
+</body>
+</html>
