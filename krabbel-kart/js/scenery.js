@@ -654,6 +654,40 @@ function snow(w) {
   if (pool) pool.renderOrder = 0.6;
 }
 
+// Like mergeColored, but keeps the smooth (indexed) normals: soft clay and painted looks.
+// parts: [{ geo, color, matrix?, bottom? }]; `bottom` is a second colour that fades into `color`
+// over the height of the part (cheap baked shading). Parts are consumed.
+export function mergeSmooth(parts) {
+  const pos = [], nor = [], col = [], idx = [];
+  const tc = new THREE.Color(), bc = new THREE.Color(), cc = new THREE.Color();
+  for (const p of parts) {
+    const g = p.geo;
+    if (p.matrix) g.applyMatrix4(p.matrix);
+    const P = g.attributes.position, N = g.attributes.normal, n = P.count, base = pos.length / 3;
+    tc.set(p.color);
+    let y0 = Infinity, y1 = -Infinity;
+    if (p.bottom !== undefined) {
+      bc.set(p.bottom);
+      for (let i = 0; i < n; i++) { const y = P.getY(i); if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    for (let i = 0; i < n; i++) {
+      pos.push(P.getX(i), P.getY(i), P.getZ(i));
+      nor.push(N.getX(i), N.getY(i), N.getZ(i));
+      if (p.bottom !== undefined) UTIL.mix3(cc, bc, tc, (P.getY(i) - y0) / (y1 - y0 || 1)); else cc.copy(tc);
+      col.push(cc.r, cc.g, cc.b);
+    }
+    if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
+    else for (let i = 0; i < n; i++) idx.push(base + i);
+    g.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  out.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
+  return out;
+}
+
 // Everything a world pack needs, handed to its theme() and scenery() functions so packs
 // never import game modules themselves: THREE, all of util.js (noise, colours, mergeColored,
 // mat4, canvas helpers...), the placement helpers and the model builders above.
@@ -663,6 +697,7 @@ export const KIT = Object.assign({}, UTIL, {
   geoRoundTree, geoPine, geoPalm, geoCactus, geoRock, geoBush, geoHouse, geoHoodoo, geoSnowman, geoIgloo,
   geoCabin, geoBalloon, geoSailboat, geoLighthouse, geoArch,
 });
+KIT.mergeSmooth = mergeSmooth;
 
 const BUILTIN = { meadow, canyon, island, snow };
 
