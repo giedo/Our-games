@@ -12,7 +12,7 @@
 
 import candy from './candy.js';
 //
-// import story from './story.js';
+import story from './story.js';
 //
 // import wonky from './wonky.js';
 //
@@ -23,7 +23,7 @@ import candy from './candy.js';
 export const WORLD_PACKS = [
   candy,
   //
-  // story,
+  story,
   //
   // wonky,
   //
