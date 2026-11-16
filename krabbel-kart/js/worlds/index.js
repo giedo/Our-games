@@ -18,7 +18,7 @@
 //
 // import plum from './plum.js';
 //
-// import neon from './neon.js';
+import neon from './neon.js';
 
 export const WORLD_PACKS = [
   // candy,
@@ -29,7 +29,7 @@ export const WORLD_PACKS = [
   //
   // plum,
   //
-  // neon,
+  neon,
 ];
 
 export function packById(id) {
