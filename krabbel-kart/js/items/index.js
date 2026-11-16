@@ -7,10 +7,16 @@ import './sfx.js';
 import './names.js';
 import '../stars.js';
 //
-// import './turbo3.js';
+import './turbo3.js';
 //
-// import './star.js';
+import './star.js';
 //
-// import './rocket.js';
+import './rocket.js';
 //
-// import './spring.js';
+import './spring.js';
+//
+import './ball.js';
+import './comet.js';
+import './bomb.js';
+import './shrink.js';
+import './giant.js';
