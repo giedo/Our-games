@@ -4,7 +4,7 @@ Home-made games. Each game lives in its own folder and runs in the browser, with
 
 | Game | What it is | Play |
 | --- | --- | --- |
-| [Krabbel Kart](krabbel-kart/) | A kart racer where the kids' own drawings become the 3D racers. iPad and PC, 1 or 2 players. | open `krabbel-kart/index.html` through a web server (see below) |
+| [Krabbel Kart](krabbel-kart/) | A kart racer where the kids' own drawings become the 3D racers: nine worlds, race, battle and explore modes, items and obstacles. iPad and PC, 1 or 2 players. | open `krabbel-kart/index.html` through a web server (see below) |
 
 ## Putting it online (GitHub Pages)
 

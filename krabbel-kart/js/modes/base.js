@@ -7,8 +7,8 @@ import { clamp } from '../util.js';
 import { t, addStrings } from '../i18n.js';
 
 addStrings({
-  en: { modeGroup: { race: 'Race', battle: 'Battle' }, endHere: 'Show results', items: 'Items', itemsAll: 'All', itemsTurbo: 'Only turbo', itemsNone: 'None' },
-  nl: { modeGroup: { race: 'Racen', battle: 'Gevecht' }, endHere: 'Naar de uitslag', items: 'Spullen', itemsAll: 'Alles', itemsTurbo: 'Alleen turbo', itemsNone: 'Geen' },
+  en: { modeGroup: { race: 'Race', battle: 'Battle' }, endHere: 'Show results', itemsOpt: 'Items', itemsAll: 'All', itemsTurbo: 'Only turbo', itemsNone: 'None' },
+  nl: { modeGroup: { race: 'Racen', battle: 'Gevecht' }, endHere: 'Naar de uitslag', itemsOpt: 'Spullen', itemsAll: 'Alles', itemsTurbo: 'Alleen turbo', itemsNone: 'Geen' },
 });
 
 const CONFETTI = [0xff4b4b, 0xffa53c, 0xffe14a, 0x5fe06a, 0x4fb8ff, 0xb46bff, 0xff7ac0];

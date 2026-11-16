@@ -24,7 +24,7 @@ class Ruler extends Shot {
   constructor(sys, kart) {
     super(sys, kart, { speed: 62, h: 1.3, life: 6, lead: 3 });
     this.mesh = sys.spawnMesh(rulerGeo(sys), litMat(sys));
-    this.mesh.scale.setScalar(1.3);
+    this.mesh.scale.setScalar(2);
     this.age = 0; this.back = false; this.base = kart.lat; this.side = Math.random() < 0.5 ? -1 : 1; this.vr = 20;
     sys.race.sfx('item-whirr', kart);
   }
@@ -50,9 +50,10 @@ class Ruler extends Shot {
     }
     this.face();
     this.mesh.rotation.y += dt * 22;
-    P.emit(true, WOOD[Math.floor(Math.random() * 3)], { x: this.pos.x, y: this.pos.y, z: this.pos.z, life: 0.3, size: 0.5, size1: 0.05, a: 0.7 });
+    P.emit(true, WOOD[Math.floor(Math.random() * 3)], { x: this.pos.x, y: this.pos.y, z: this.pos.z, life: 0.5, size: 1.1, size1: 0.1, a: 0.8 });
+    P.emit(true, 0xffffff, { x: this.prev.x, y: this.pos.y, z: this.prev.z, life: 0.4, size: 0.8, size1: 0.1, a: 0.6 });
     // Hits whoever it flies through, once each (the hit cool-down keeps them safe afterwards).
-    if (sys.hitKartsNear(this.pos.x, this.pos.y, this.pos.z, 2.2, this.age < 0.3 || this.back ? o : null, { cause: 'ruler', skipCool: true }).length) puff(sys, WOOD, 18, this.pos.x, this.pos.y, this.pos.z, 8);
+    if (sys.hitKartsNear(this.pos.x, this.pos.y, this.pos.z, 2.6, this.age < 0.3 || this.back ? o : null, { cause: 'ruler', skipCool: true }).length) puff(sys, WOOD, 18, this.pos.x, this.pos.y, this.pos.z, 8);
     return true;
   }
 }

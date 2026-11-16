@@ -166,8 +166,8 @@ export const SKINS = {
     },
   },
   slick: {
-    puddle: () => skin(blob([0x4a2f8c, 0x7a4fd0, 0x31c8d8], 3), { emissive: 0x2a2060 }),
-    ice: () => skin(blob([0xb4e4ff, 0xe3f6ff, 0xffffff], 8, 0.08), { emissive: 0x405870 }),
+    puddle: () => skin(blob([0x3a1f7c, 0x8a5fe8, 0x4fe0f0], 3), { emissive: 0x4a3a98 }),
+    ice: () => skin(blob([0xffffff, 0x8fd4ff, 0xe8f8ff], 8, 0.08), { emissive: 0x7098c0 }),
   },
   spinner: {
     sweeper() {

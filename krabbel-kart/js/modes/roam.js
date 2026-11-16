@@ -212,6 +212,20 @@ class Roam extends Mode {
 
   onLap(kart) {}
 
+  // Minimap: little ones see every hidden sticker, big ones only the nearest.
+  mapMarks() {
+    const pool = this.pool || (this.pool = Array.from({ length: COUNT }, () => ({ x: 0, z: 0, color: '#ffd21f', shape: 'sticker' })));
+    const out = this.mm || (this.mm = []);
+    const near = this.race.age === 'little' ? -1 : this.nearest(this.race.humans[0]);
+    let c = 0;
+    for (let i = 0; i < COUNT; i++) {
+      if (this.found[i] || (near >= 0 && i !== near)) continue;
+      const m = pool[c]; m.x = this.spots[i].x; m.z = this.spots[i].z; m.shape = 'sticker'; out[c++] = m;
+    }
+    out.length = c;
+    return out;
+  }
+
   hudInfo(kart) {
     return { place: null, lap: null, extra: [{ icon: STAR_SVG, text: `${this.count}/${COUNT}` }] };
   }

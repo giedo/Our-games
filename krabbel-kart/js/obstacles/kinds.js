@@ -59,7 +59,7 @@ class Obs {
 class Roller extends Obs {
   constructor(sys, def) {
     super(sys, def);
-    this.r = def.size || 1.6;
+    this.r = (def.size || 1.6) * 1.4;
     this.n = clamp(def.count | 0 || 1, 1, 3);
     this.period = def.period || 4;
     this.amp = sys.tr.halfWidth - 0.8;
@@ -140,12 +140,12 @@ class Crosser extends Obs {
     super(sys, def);
     this.n = clamp(def.count | 0 || 4, 3, 6);
     this.sp = def.speed || 2.5;
-    this.sc = 1.5 * (def.size || 1);
+    this.sc = 2.1 * (def.size || 1);
     this.edge = sys.tr.halfWidth + 1.3;
-    this.half = (this.n * 2.2) / 2 + 2;
+    this.half = (this.n * 2.8) / 2 + 2;
     this.sw = this.swarm('crosser', def.skin, this.n);
     const dir = Math.random() < 0.5 ? 1 : -1;
-    this.c = Array.from({ length: this.n }, (_, i) => Object.assign(newBody(), { lat: clamp(this.lat - dir * (i * 1.1 - 2) , -this.edge, this.edge), dir, d: (i - (this.n - 1) / 2) * 2.2, sp: this.sp * rnd(0.9, 1.1), walk: i * 0.7, gone: 0 }));
+    this.c = Array.from({ length: this.n }, (_, i) => Object.assign(newBody(), { lat: clamp(this.lat - dir * (i * 1.1 - 2) , -this.edge, this.edge), dir, d: (i - (this.n - 1) / 2) * 2.8, sp: this.sp * rnd(0.9, 1.1), walk: i * 0.7, gone: 0 }));
   }
 
   fold(x) { const e = this.edge, p = 4 * e; let m = (((x + e) % p) + p) % p; if (m > 2 * e) m = p - m; return m - e; }
@@ -277,13 +277,13 @@ class Cones extends Obs {
     super(sys, def);
     this.n = clamp(def.count | 0 || 6, 1, 14);
     this.sw = this.swarm('cones', def.skin, this.n);
-    this.sc = 1.5;
+    this.sc = 2.1;
     this.c = [];
     for (let i = 0; i < this.n; i++) {
-      const ring = i === 0 ? 0 : i < 7 ? 1 : 2, a = ring ? ((i - (ring === 1 ? 1 : 7)) / (ring === 1 ? 6 : 7)) * TAU + ring : 0, R = ring * 1.55;
+      const ring = i === 0 ? 0 : i < 7 ? 1 : 2, a = ring ? ((i - (ring === 1 ? 1 : 7)) / (ring === 1 ? 6 : 7)) * TAU + ring : 0, R = ring * 2.1;
       this.c.push(Object.assign(newBody(), { l0: Math.cos(a) * R, d0: Math.sin(a) * R, state: 0, back: 0, gone: 0, ry: rnd(0, 6) }));
     }
-    this.half = 1.55 * (this.n > 7 ? 2 : this.n > 1 ? 1 : 0) + 3;
+    this.half = 2.1 * (this.n > 7 ? 2 : this.n > 1 ? 1 : 0) + 3;
   }
 
   step(dt, time) {
@@ -304,7 +304,7 @@ class Cones extends Obs {
       for (const c of this.c) {
         if (c.fly || c.gone > 0 || (c.back > 0 && c.back < 0.7)) continue;
         const dl = k.lat - (this.lat + c.l0), dz = dk - c.d0;
-        if (dl * dl + dz * dz > 1.6 * 1.6) continue;
+        if (dl * dl + dz * dz > 2.1 * 2.1) continue;
         const sg = dl >= 0 ? 1 : -1, big = strong(k);
         fling(c, -sg * rnd(3, 8) * (big ? 1.5 : 1), k.speed * rnd(0.3, 0.6), rnd(6, 10) * (big ? 1.4 : 1), rnd(8, 16));
         c.back = 0; hitAny = true;
@@ -365,7 +365,7 @@ class Slick extends Obs {
     if (!this.vis) return;
     const P = sys.at(this.s0, this.lat, 0.03);
     const br = 1 + 0.02 * Math.sin(time * 2 + this.s0);
-    this.sw.set(0, P.x, P.y, P.z, P.yaw + time * 0.15, -P.slope, 0, this.r * br);
+    this.sw.set(0, P.x, P.y, P.z, P.yaw + time * 0.15, -P.slope, 0, this.r * br * 1.25);
     this.commit();
   }
 
@@ -475,7 +475,7 @@ class Traffic extends Obs {
     super(sys, def);
     this.n = clamp(def.count | 0 || 2, 1, 4);
     this.v = def.speed || 9; this.span = Math.max(120, this.n * 60);
-    this.half = this.span / 2 + 3; this.sc = 1.5;
+    this.half = this.span / 2 + 3; this.sc = 2.1;
     const m = sys.tr.halfWidth - 1.6;
     this.lanes = this.lat === 0 ? [-3.8, 3.8] : [this.lat, this.lat > 0 ? this.lat - 8 : this.lat + 8];
     this.lanes = this.lanes.map((x) => clamp(x, -m, m));
@@ -506,14 +506,14 @@ class Traffic extends Obs {
         if (c.fly || c.fade < 0.5) continue;
         const dl = k.lat - (c.lane + c.dev), dz = dk - c.d;
         if (c.honk <= 0 && dz < -4 && dz > -16 && Math.abs(dl) < 3 && k.human) { c.honk = 5; sys.sfx('obs-honk', k); }
-        if (air > 1.1 || Math.abs(dl) > 1.65 || Math.abs(dz) > 2.7) continue;
+        if (air > 1.1 || Math.abs(dl) > 2.2 || Math.abs(dz) > 3.7) continue;
         c.sq = 1;
         const sg = dl >= 0 ? 1 : -1;
         if (strong(k)) {
           fling(c, sg * -rnd(8, 12), k.speed * 0.4, rnd(7, 10), rnd(6, 10)); c.ang = 0;
           sys.sfx('obs-pop', k); continue;
         }
-        const penL = 1.65 - Math.abs(dl), penZ = 2.7 - Math.abs(dz), tr = sys.tr, ix = k.idx;
+        const penL = 2.2 - Math.abs(dl), penZ = 3.7 - Math.abs(dz), tr = sys.tr, ix = k.idx;
         if (penZ < penL * 1.6 && dz <= 0) { k.x -= tr.tx[ix] * penZ; k.z -= tr.tz[ix] * penZ; } else { k.x += tr.rx[ix] * sg * penL; k.z += tr.rz[ix] * sg * penL; }
         if (this.cool[ki] < time) {
           this.cool[ki] = time + 0.7;

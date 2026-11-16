@@ -1,7 +1,7 @@
 {
   "name": "Krabbel Kart",
   "short_name": "Krabbel Kart",
-  "description": "Draw your own racers and race them through four hand-made 3D worlds.",
+  "description": "Draw your own racers and race them through nine hand-made 3D worlds.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",

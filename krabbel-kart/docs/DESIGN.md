@@ -333,6 +333,19 @@ Pitfalls: `hit()` is ignored for 2.4 s after a spin (`hitCool`); hitting a ghost
 
 The model (from `buildRacerModel`, `js/racerModel.js`) is `root > tilt > body > anim > (vehicleMesh, pivot > driverAnim > driverMesh)` with the shield on `body`. `model.anim` (the whole racer) and `model.driverAnim` (just the drawing of the driver) are identity groups reserved for the animator: write their position, rotation and scale absolutely every frame and nothing else fights you. `body` and `pivot` are set by the kart/menu/podium code every frame (absolute assignment), so add to them (read, then write) or avoid them. Gestures: `select idle throw win lose hit overtake boost`. Emote particles: `race.particles.emit/burst` (see `js/particles.js`); there is no particle system for menu or podium racers yet.
 
+### Added by the feature packages
+
+Hooks and fields that appeared after the foundation. All have working defaults; read the code for details.
+
+- **Mode hooks** (`js/modes/base.js`): `hudBanner(kart)` ({ text, sub, cls }: the line under the HUD, cls `danger`, `out` or `go`), `hudAction(kart)` ({ label, fn }: a button), `spectate(kart)` (camera target of a kart that is out), `skipCountdown`, `showWrongWay`, `canEnd()` and `endNow()` (the pause menu "End" button shows results), `mapMarks()` (reused list of `{ x, z, color, shape }` for the minimap; shapes `flag`, `ring`, `star`, `sticker`, `dot`), `mapColor(kart)` (minimap dot colour). Explore uses `mapMarks` to show hidden stickers (all for the little group, the nearest for the big group).
+- **Mode class fields**: `group` (`race` or `battle`, the sections of the mode picker), `maxPlayers`, `humanRows` (results list only the players), `roadStars` (false: no gold road stars), `static cardNote(worldId)` (text on a track card).
+- **HUD** (`js/hud.js`): `hud.message(text, dur, cls)` (messages longer than 14 characters get the `long` style: smaller, two lines at most, upper third of the view), `hud.warn(text, dur)` (blinking red pill, used by the comet), `_mark` shapes as above.
+- **Items** (`js/items.js`): `SYSTEM_HOOKS` (functions run at the end of the `ItemSystem` constructor; `js/stars.js` uses it for the gold road stars, `sys.roadStars`), `sys.ofKind('star')`, `sys.hitKartsNear(...)`, `sys.give(kart, id)`. Shared helpers for projectiles (`Shot`, `Wave`, `puff`, `canHit`, `hudOf`) are in `js/items/common.js`.
+- **Obstacles** (`js/obstacles.js`): `race.obstacles.advise(kart)` (where a computer racer should steer to avoid obstacles), `race.obstacles.list`, kinds in `js/obstacles/kinds.js` (`KINDS`, `HARD` = kinds not built for the little group), skins in `js/obstacles/looks.js`.
+- **Kart** (`js/kart.js`): `lift` (ramp surface height under the kart) and `liftPitch` (set by obstacles), `driftHeld` (the drift button is down; a tap in the air after a ramp starts a trick, big group only), `gesture(name)` (character animation: select, idle, throw, win, lose, hit, overtake, boost, trick).
+- **Track definitions** (`js/tracks.js`): arena fields `limitPad` (how far past the road edge karts may go; arenas run up to the fence) and `itemLats` (lateral positions of item rows).
+- **Strings**: never use a plain string key that a feature also uses as a group. `t('items')` is the group of item names, so the race option label is `itemsOpt`.
+
 ### Pitfalls
 
 - Pack files and mode/item files must not import from `main.js`, `ui.js` or `race.js`. Modes and items get the game through `this.race` / `sys`.

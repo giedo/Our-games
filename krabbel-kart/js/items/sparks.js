@@ -11,7 +11,7 @@ class Spark extends Shot {
   constructor(sys, kart) {
     super(sys, kart, { speed: 78, h: 1.2, life: 1.4, lead: 3 });
     this.mesh = sys.spawnMesh(geoOnce(sys, 'spark', () => [{ geo: paint(starGeo(0.6, 0.25, 0.25, 4), () => 0xffe14a), color: 0xffe14a }]), litMat(sys));
-    this.age = 0; this.mesh.scale.setScalar(1.8);
+    this.age = 0; this.mesh.scale.setScalar(2.7);
     sys.race.sfx('item-zap', kart);
   }
 
@@ -38,8 +38,8 @@ class Spark extends Shot {
     this.face();
     this.mesh.rotation.set(0, this.age * 18, this.age * 9);
     const P = sys.race.particles;
-    for (let i = 0; i < 2; i++) P.emit(true, FIRE[Math.floor(Math.random() * 4)], { x: this.prev.x + (this.pos.x - this.prev.x) * i * 0.5, y: this.pos.y + (Math.random() - 0.5) * 0.4, z: this.prev.z + (this.pos.z - this.prev.z) * i * 0.5, vy: 1 + Math.random() * 2, life: 0.4, size: 0.5, size1: 0.05, gravity: 6, a: 0.9 });
-    if (sys.hitKartsNear(this.pos.x, this.pos.y, this.pos.z, 1.9, this.age < 0.25 ? this.owner : null, { cause: 'sparks', first: true }).length) {
+    for (let i = 0; i < 3; i++) P.emit(true, FIRE[Math.floor(Math.random() * 4)], { x: this.prev.x + (this.pos.x - this.prev.x) * i * 0.33, y: this.pos.y + (Math.random() - 0.5) * 0.6, z: this.prev.z + (this.pos.z - this.prev.z) * i * 0.33, vy: 1 + Math.random() * 2, life: 0.5, size: 0.9, size1: 0.05, gravity: 6, a: 0.9 });
+    if (sys.hitKartsNear(this.pos.x, this.pos.y, this.pos.z, 2.3, this.age < 0.25 ? this.owner : null, { cause: 'sparks', first: true }).length) {
       puff(sys, FIRE, 24, this.pos.x, this.pos.y, this.pos.z, 9, { size: 0.5, life: 0.6 });
       return false;
     }
