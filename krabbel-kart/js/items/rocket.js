@@ -6,7 +6,7 @@ import { litMat, geoOnce, mat4, puff, detach, canHit, RAINBOW } from './common.j
 
 addStrings({ en: { items: { rocket: 'Rocket Pencil' } }, nl: { items: { rocket: 'Raketpotlood' } } });
 
-const R = 0.4, H = Math.PI / 2;
+const R = 0.55, H = Math.PI / 2;
 
 // A hexagonal pencil along +Z, 3 m of body, a sharpened wooden tip in front and an eraser at the back.
 function pencilGeo(sys) {
@@ -16,8 +16,8 @@ function pencilGeo(sys) {
     { geo: new THREE.CylinderGeometry(R * 0.95, R * 0.95, 0.5, 6), color: 0xff7ac0, matrix: mat4(0, 0, -2.25, H, 0, 0) },
     { geo: new THREE.CylinderGeometry(R * 0.3, R, 1.0, 6), color: 0xf2c79a, matrix: mat4(0, 0, 2.1, H, 0, 0) },
     { geo: new THREE.CylinderGeometry(0.02, R * 0.3, 0.4, 6), color: 0x2a2433, matrix: mat4(0, 0, 2.8, H, 0, 0) },
-    { geo: new THREE.BoxGeometry(0.06, 0.5, 1.6), color: 0xff4b4b, matrix: mat4(0, 0.35, -1.3, 0, 0, 0) },
-    { geo: new THREE.BoxGeometry(1.1, 0.06, 1.2), color: 0xff4b4b, matrix: mat4(0, 0, -1.4, 0, 0, 0) },
+    { geo: new THREE.BoxGeometry(0.1, 0.9, 1.8), color: 0xff4b4b, matrix: mat4(0, 0.6, -1.3, 0, 0, 0) },
+    { geo: new THREE.BoxGeometry(3.8, 0.1, 1.5), color: 0xff4b4b, matrix: mat4(0, 0.1, -1.3, 0, 0, 0) },
   ]);
 }
 

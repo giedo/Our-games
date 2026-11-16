@@ -30,7 +30,7 @@ const results = await page.evaluate(async ({ only }) => {
       if (each) each(i);
     }
   };
-  race.autopilot = true; race.skipIntro();
+  race.laps = 999; race.autopilot = true; race.skipIntro();
   step(14);
   const ok = (name, cond, msg) => out.push({ name, ok: !!cond, msg: cond ? '' : msg });
   const things = () => sys.things.filter((x) => x.kind !== 'star' && x.kind !== 'starfield').length;

@@ -18,7 +18,7 @@ class Stamp {
       { geo: new THREE.SphereGeometry(0.75, 10, 8), color: 0xff4b4b, matrix: mat4(0, 2.0, 0, 0, 0, 0) },
     ]), litMat(sys), kart.x, kart.y + 9, kart.z);
     this.mesh.rotation.y = kart.dir;
-    this.mesh.scale.setScalar(1.1);
+    this.mesh.scale.setScalar(1.6);
     this.pending = [];
     for (const k of sys.race.karts) if (canHit(k, kart)) this.pending.push({ k, at: 0.25 + Math.min(0.8, Math.hypot(k.x - kart.x, k.z - kart.z) / 110) });
   }
@@ -27,8 +27,8 @@ class Stamp {
     this.t += dt;
     const t = this.t, o = this.owner, P = sys.race.particles;
     const slam = Math.min(1, t / 0.22);
-    this.mesh.position.set(o.x, o.y + 1.9 + (1 - slam * slam) * 7 + Math.max(0, t - 0.5) * 12, o.z);
-    this.mesh.scale.setScalar(t > 0.5 ? Math.max(0.01, 1.1 - (t - 0.5) * 2.2) : 1.1);
+    this.mesh.position.set(o.x, o.y + 1.9 + (1 - slam * slam) * 7 + Math.max(0, t - 0.6) * 12, o.z);
+    this.mesh.scale.setScalar(t > 0.6 ? Math.max(0.01, 1.6 - (t - 0.6) * 3.2) : 1.6);
     if (!this.done && t >= 0.22) {
       this.done = true;
       sys.race.sfx('item-stamp', o);

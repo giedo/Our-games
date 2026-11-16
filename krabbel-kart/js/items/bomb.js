@@ -17,7 +17,7 @@ class Bomb {
     let lat = kart.lat;
     const tgt = sys.race.kartAhead(kart);
     if (tgt && !sys.race.world.def.arena && Math.hypot(tgt.x - kart.x, tgt.z - kart.z) < 45) lat = tgt.lat * 0.7 + lat * 0.3; // aim at the one ahead
-    this.b = tr.posAt(kart.s + (dir * 25) / tr.seg, lat, new THREE.Vector3());
+    this.b = tr.posAt(kart.s + (dir * (25 + Math.max(0, kart.speed) * T)) / tr.seg, lat, new THREE.Vector3());
     this.pos = this.a.clone();
     this.mesh = sys.spawnMesh(geoOnce(sys, 'bomb', () => [
       { geo: new THREE.SphereGeometry(0.75, 12, 9), color: 0xff5cf0 },
