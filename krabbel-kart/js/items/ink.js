@@ -6,7 +6,7 @@ import { Wave, isArena, canHit, hudOf } from './common.js';
 addStrings({ en: { items: { ink: 'Ink Blot' } }, nl: { items: { ink: 'Inktvlek' } } });
 
 const BLOT = 'M50 6c10 2 14 12 24 14 14 3 22 14 18 28-3 10 3 16-4 26-6 8-16 6-24 12-10 6-18 8-28 2-8-5-10-12-18-16C6 66 2 56 8 44c4-8 2-16 10-24 8-8 20-4 26-12 2-2 4-2 6-2z';
-const SPOTS = [[8, 12, 34, 0], [58, 8, 36, 1], [28, 40, 30, 2], [64, 46, 32, 3], [4, 58, 30, 4], [40, 64, 26, 5]]; // left %, top %, size %, order
+const SPOTS = [[4, 14, 20, 0], [74, 12, 22, 1], [22, 46, 18, 2], [66, 50, 20, 3], [2, 64, 18, 4], [78, 68, 16, 5]]; // left %, top %, size %, order
 
 // The blots on one player's screen (a div inside the HUD), fading out at the end.
 class Blots {
