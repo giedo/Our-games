@@ -148,9 +148,8 @@ class Game {
     if (this.previewPick === key) return;
     this.clearPreview();
     this.preview = buildRacerModel(driver, vehicle);
-    this.preview.animator = new Animator(this.preview, { preview: true });
+    this.preview.animator = new Animator(this.preview, { preview: true, id: driver.id });
     this.previewPick = key;
-    this.preview.pop = 1;
     this.preview.animator.play('select');
     this.placePreview();
   }
@@ -171,10 +170,6 @@ class Game {
       this.orbit += dt * 0.42;
       p.set(c.x + Math.sin(this.orbit) * 7.6, c.y + 2.5, c.z + Math.cos(this.orbit) * 7.6);
       l.set(c.x, c.y + 1.15, c.z);
-      m.pop = damp(m.pop, 0, 6, dt);
-      const s = 1 + Math.sin(m.pop * Math.PI) * 0.25;
-      m.body.scale.set(s, 1 + m.pop * 0.3, s);
-      m.body.position.y = Math.abs(Math.sin(w.time * 2.2)) * 0.06;
       m.animator.update(dt, w.time, null);
     } else {
       this.flyS += (dt * 13) / tr.seg;
