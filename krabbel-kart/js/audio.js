@@ -5,6 +5,7 @@
 //  - Music: hand-written tunes, one per world, played by simple synth
 //    instruments (lead, bass, chords, drums) through reverb and echo.
 import { mulberry32, clamp } from './util.js';
+import { WORLD_PACKS } from './worlds/index.js';
 
 const PC = { c: 0, d: 2, e: 4, f: 5, g: 7, a: 9, b: 11 };
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
@@ -90,6 +91,13 @@ const STYLES = {
   march: { kick: [0, 8], snare: [4, 12, 14, 15], hat: [0, 2, 4, 6, 8, 10, 12, 14], hatVol: 0.3, bass: [[0, 0], [4, 7], [8, 0], [12, 7]], bassLen: 3, comp: 'stab', level: 1 },
 };
 
+// World packs bring their own tune (pack.song) and optionally their own rhythm style
+// (pack.style, then song.style defaults to the pack id). The tune plays for that world id.
+for (const p of WORLD_PACKS) {
+  if (p.style) STYLES[p.id] = p.style;
+  if (p.song) SONGS[p.id] = Object.assign({ style: p.style ? p.id : 'soft', lead: 'bell' }, p.song);
+}
+
 function compile(song) {
   const bars = song.chords.split(' ').map((b) => b.split(',').map(chordOf));
   const lead = new Map();
@@ -104,6 +112,11 @@ function compile(song) {
   });
   return { bars, lead, steps: bars.length * 16 };
 }
+
+// Sounds added by feature files: registerSfx('boing', (audio, t, vol, dest) => audio._tone(dest, 'sine', 200, 600, t, 0.2, 0.4 * vol)).
+// Inside the function use audio._tone, audio._noise, audio._bell, audio._brass and audio._voice like play() does.
+const EXTRA_SFX = {};
+export function registerSfx(name, fn) { EXTRA_SFX[name] = fn; }
 
 // One player's engine.
 class EngineVoice {
@@ -393,7 +406,7 @@ export class GameAudio {
         T('sine', 115, 42, t, 0.32, 0.6 * v); N('lowpass', 900, 200, t, 0.2, 0.4 * v);
         for (let i = 0; i < 10; i++) N('highpass', 3500, 3500, t + 0.08 + Math.random() * 0.55, 0.03, 0.12 * v);
         break;
-      default: break;
+      default: { const f = EXTRA_SFX[name]; if (f) f(this, t, v, d); break; }
     }
   }
 

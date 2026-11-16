@@ -6,11 +6,15 @@
 ## What is in it
 
 - **Your drawings become 3D racers.** Take a photo of a drawing on paper (or draw on the screen). The game removes the paper, and turns the drawing into a puffy 3D driver or a chunky 3D vehicle that you can pick like any other racer.
-- **Four worlds**: Tulip Valley (windmills and flower fields), Sunset Canyon, Coconut Bay (beaches around a volcano) and Aurora Peaks (snow under the northern lights).
+- **Nine worlds**: Tulip Valley (windmills and flower fields), Sunset Canyon, Coconut Bay (beaches around a volcano), Aurora Peaks (snow under the northern lights), and five more: a candy land, a storybook, a plum orchard, a wonky town and a neon night city.
 - **8 racers per race**, 3 laps. Computer racers also use your other drawings, so the kids' characters race each other.
-- **Tournament**: all four tracks in a row, points for every race, standings in between, and a podium ceremony with trophy, confetti and fireworks at the end.
-- **1 or 2 players** on one screen (split screen).
-- **Items**: turbo crayon, paint puddle, paper plane, bubble shield. Boost pads on the road.
+- **Game modes**: Race, Time Trial (with a ghost of your best lap), Explore (find 10 golden stickers, no racing), Knockout (the last karts drop out at each gate) and Grand Prix (three cups of three races each, points, standings and a podium ceremony). Battle modes on a round arena: Balloon Battle, Star Scramble and Capture the Flag (red against blue). Pick them on the mode screen; more can be plugged in (see `docs/DESIGN.md`).
+- **Age setting**: "4 to 6" (gentle: five simple modes, soft obstacles and items, no reading needed, a steering help button on the track screen) or "7 to 10" (all modes and items), chosen on the players screen.
+- **1 or 2 players** on one screen (split screen); the battle modes also have teams.
+- **Items**: 22 power-ups in all, from the turbo crayon, paint puddle, paper plane and bubble shield to comet chalk, ink blot, boomerang ruler, sparkler, star magnet and more, plus gold stars on the road to collect. Boost pads on the road.
+- **Obstacles**: rolling balls, waddling critters, cones, toy traffic, bouncers, ramps and (7 to 10 only) slippery patches, sweepers and poppers. Computer racers steer around them.
+- **Trick jumps**: drive off a ramp and tap Drift in the air (7 to 10) for a trick and a landing boost.
+- **Characters move**: drivers cheer, throw, lean over, duck for a boost and celebrate, based on their own personality.
 - **Drifting**: hold drift in a corner, the sparks change colour, let go for a boost.
 - **Works with** touch (iPad), keyboard and gamepads.
 - English and Dutch (Settings > Language).
@@ -59,7 +63,26 @@ js/cutout.js        paper removal              js/editor.js    drawing studio
 js/puffy.js         drawing -> 3D mesh         js/drawpad.js   draw-on-screen pad
 js/builtin.js       the built-in doodles       js/ui.js        menus
 js/props.js         grandstand, signs, tyres   js/ceremony.js  podium ceremony
+js/modes/           game modes (base, race, cup, index = the list)
+js/worlds/          world packs (index = the list, _example.js = a minimal one)
+js/items/           extra items (index = the list)    js/items.js     item boxes, registry, machinery
+js/cups.js          Grand Prix cups            js/age.js       the age setting
+js/obstacles.js     road obstacles (system)    js/obstacles/   obstacle kinds, looks, sounds
+js/anim.js          character animation        js/stars.js     gold stars on the road
+tools/smoke.mjs     headless test of every world and mode     tools/shot.mjs   one screenshot
+tools/items-test.mjs  headless test of every item           tools/build-single.mjs  the one-file build
+docs/DESIGN.md      the design contract and "Architecture (as built)"
 vendor/             three.js (3D library)      fonts/          Fredoka font
+```
+
+Testing (needs Playwright with Chromium, installed globally):
+
+```bash
+node tools/smoke.mjs --mode race --world meadow,canyon --age little     # worlds x modes, played to the end, fails on any error
+node tools/smoke.mjs --mode balloon,flag --world island --age big --players 2 --time 1
+node tools/smoke.mjs --arena                                             # the arena variant of every world
+node tools/items-test.mjs                                                # every item, both languages, the little-age pool
+node tools/shot.mjs --world meadow --view race --out a.png               # one screenshot (--view picker, results, ...)
 ```
 
 No build step: the browser loads the files as they are. Change a file, reload the page.

@@ -2,11 +2,12 @@
   "name": "krabbel-kart",
   "version": "1.0.0",
   "private": true,
-  "description": "Draw your own racers and race them through four hand-made 3D worlds.",
+  "description": "Draw your own racers and race them through nine hand-made 3D worlds.",
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "build:single": "node tools/build-single.mjs"
+    "build:single": "node tools/build-single.mjs",
+    "smoke": "node tools/smoke.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

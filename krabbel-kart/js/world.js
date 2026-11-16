@@ -2,7 +2,8 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { Track } from './tracks.js';
 import { makeTheme } from './themes.js';
-import { buildScenery } from './scenery.js';
+import { buildScenery, KIT } from './scenery.js';
+import { packById } from './worlds/index.js';
 import { mulberry32, makeNoise, smoothstep, lerp, makeCanvas, canvasTexture, disposeTree, TAU } from './util.js';
 
 const SKY_VERT = /* glsl */ `
@@ -171,7 +172,11 @@ export class World {
   constructor(def) {
     this.def = def;
     this.track = new Track(def);
-    this.theme = makeTheme(def.id, def.seed, this.track.bounds);
+    // The look comes from def.theme when it differs from the track id (arena variants of a world).
+    this.themeId = def.theme || def.id;
+    this.theme = makeTheme(this.themeId, def.seed, this.track.bounds);
+    const pack = packById(this.themeId);
+    this.packSkins = (pack && pack.skins) || {}; // obstacle looks supplied by the world pack
     this.scene = new THREE.Scene();
     this.rnd = mulberry32(def.seed * 977 + 5);
     this.noise = makeNoise(def.seed + 7).noise;
@@ -192,6 +197,7 @@ export class World {
     this._buildClouds();
     buildScenery(this);
     this._buildAmbient();
+    if (th.onBuilt) th.onBuilt(this, KIT); // last chance for a theme to restyle materials
   }
 
   _buildLights() {
@@ -265,13 +271,15 @@ export class World {
     const hs = new Float32Array(n1 * n1);
     const ds = new Float32Array(n1 * n1);
     const info = {};
-    const D1 = tr.halfWidth + th.blendNear, D2 = tr.halfWidth + th.blendFar;
+    const arena = !!this.def.arena; // arenas: flat island inside the ring, the landscape rises further out
+    const D1 = tr.halfWidth + (arena ? 4 : th.blendNear), D2 = tr.halfWidth + (arena ? 55 : th.blendFar);
     for (let iz = 0; iz < n1; iz++) {
       for (let ix = 0; ix < n1; ix++) {
         const x = this.tX0 + ix * cell, z = this.tZ0 + iz * cell;
         let h = th.height(x, z);
         tr.distInfo(x, z, info);
-        if (info.d < D2) {
+        if (arena && this.inIsland(x, z)) h = info.y - 0.35;
+        else if (info.d < D2) {
           const a = smoothstep(D1, D2, info.d);
           h = lerp(info.y - 0.35, h, a);
         }
@@ -328,7 +336,7 @@ export class World {
   _detailTexture() {
     const S = 256, c = makeCanvas(S, S), g = c.getContext('2d');
     const rnd = mulberry32(this.def.seed + 31);
-    const kind = this.theme.id;
+    const detail = this.theme.detail, kind = detail.kind;
     g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, S, S);
     // Big soft blotches, drawn wrapped so the tile repeats without seams.
     for (let i = 0; i < 46; i++) {
@@ -340,19 +348,30 @@ export class World {
         g.fillStyle = gr; g.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
       }
     }
-    const strokes = kind === 'snow' ? 260 : kind === 'canyon' ? 420 : 900;
     g.lineCap = 'round';
-    for (let i = 0; i < strokes; i++) {
-      const x = rnd() * S, y = rnd() * S, dark = rnd() < 0.6;
-      g.strokeStyle = dark ? 'rgba(120,120,120,0.32)' : 'rgba(255,255,255,0.5)';
-      g.lineWidth = 1 + rnd() * 1.4;
-      g.beginPath();
-      if (kind === 'canyon') { g.moveTo(x, y); g.lineTo(x + 6 + rnd() * 16, y + (rnd() - 0.5) * 2); }
-      else if (kind === 'snow') { g.moveTo(x, y); g.lineTo(x + 0.5, y + 0.5); }
-      else { g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - 3 - rnd() * 5); }
-      g.stroke();
+    if (kind === 'custom' && detail.draw) detail.draw(g, S, rnd);
+    else {
+      for (let i = 0; i < detail.strokes; i++) {
+        const x = rnd() * S, y = rnd() * S, dark = rnd() < 0.6;
+        g.strokeStyle = dark ? 'rgba(120,120,120,0.32)' : 'rgba(255,255,255,0.5)';
+        g.lineWidth = 1 + rnd() * 1.4;
+        g.beginPath();
+        if (kind === 'ripples') { g.moveTo(x, y); g.lineTo(x + 6 + rnd() * 16, y + (rnd() - 0.5) * 2); }
+        else if (kind === 'sparkle') { g.moveTo(x, y); g.lineTo(x + 0.5, y + 0.5); }
+        else { g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 3, y - 3 - rnd() * 5); }
+        g.stroke();
+      }
     }
     return canvasTexture(c, { repeat: true });
+  }
+
+  // Arenas: is this point inside the ring (the island)? Scenery keeps clear of it.
+  inIsland(x, z) {
+    if (!this.def.arena) return false;
+    const tr = this.track, i = tr.nearestIndex(x, z);
+    if (i < 0) return false;
+    const b = tr.bounds, ax = tr.px[i] - b.cx, az = tr.pz[i] - b.cz;
+    return (x - b.cx) * ax + (z - b.cz) * az < ax * ax + az * az;
   }
 
   // Terrain height (matches the triangles of the terrain mesh exactly).
@@ -494,7 +513,7 @@ export class World {
       this.scene.add(skirt);
     }
     // Start / finish line.
-    {
+    if (!this.def.arena) {
       const c = makeCanvas(128, 64), g = c.getContext('2d');
       for (let y = 0; y < 4; y++) for (let x = 0; x < 8; x++) {
         g.fillStyle = (x + y) % 2 ? '#111' : '#fff';
@@ -532,7 +551,7 @@ export class World {
     // Item box spots.
     this.itemSpots = [];
     for (const frac of this.def.itemRows) {
-      for (const lat of [-5.4, -1.8, 1.8, 5.4]) {
+      for (const lat of this.def.itemLats || [-5.4, -1.8, 1.8, 5.4]) {
         const p = tr.posAt(frac * n, lat, new THREE.Vector3());
         this.itemSpots.push({ s: frac * n, lat, pos: p });
       }
@@ -603,8 +622,8 @@ export class World {
     mesh.renderOrder = 1;
     this.scene.add(mesh);
     this.timeUniforms.push(mat.uniforms.uTime);
-    if (this.theme.id === 'island') {
-      // Endless ocean beyond the island.
+    if (w.ocean) {
+      // Endless ocean beyond the landscape (island).
       const R0 = S / 2 - 2, R1 = 7000;
       const ring = new THREE.RingGeometry(R0, R1, 4, 1, Math.PI / 4);
       ring.rotateX(-Math.PI / 2);
@@ -628,6 +647,7 @@ export class World {
 
   _buildClouds() {
     const cl = this.theme.clouds, rnd = this.rnd, b = this.track.bounds;
+    if (!cl || !cl.count) return;
     const geo = new THREE.IcosahedronGeometry(1, 1);
     const mat = new THREE.MeshLambertMaterial({ color: cl.color, flatShading: true, fog: false, emissive: cl.color, emissiveIntensity: 0.5 });
     const puffs = [];
@@ -656,11 +676,12 @@ export class World {
 
   _buildAmbient() {
     const am = this.theme.ambient, rnd = this.rnd;
-    const cfg = {
+    if (!am) return;
+    const cfg = Object.assign({}, {
       pollen: { n: 260, box: 70, size: 0.22, vel: [0.6, 0.25, 0.3], op: 0.75 },
       dust: { n: 300, box: 70, size: 0.2, vel: [2.4, 0.1, 1.0], op: 0.55 },
       snow: { n: 900, box: 60, size: 0.26, vel: [0.8, -3.2, 0.4], op: 0.95 },
-    }[am.kind];
+    }[am.kind] || { n: 260, box: 70, size: 0.22, vel: [0.6, 0.25, 0.3], op: 0.75 }, am.cfg);
     const pos = new Float32Array(cfg.n * 3), rn = new Float32Array(cfg.n);
     for (let i = 0; i < cfg.n; i++) {
       pos[i * 3] = rnd() * cfg.box; pos[i * 3 + 1] = rnd() * cfg.box; pos[i * 3 + 2] = rnd() * cfg.box;

@@ -1,10 +1,14 @@
 // Track layouts + the Track class (a closed spline sampled every ~2 metres).
 import * as THREE from '../vendor/three.module.min.js';
-import { angleDiff, clamp } from './util.js';
+import { angleDiff, clamp, TAU } from './util.js';
+import { WORLD_PACKS } from './worlds/index.js';
+import { addStrings } from './i18n.js';
 
 // Control points are [x, z, height]. The first point sits in the middle of the
 // start straight, and the track runs in the direction of the second point.
-export const TRACKS = [
+// A def can also carry: theme (look to use when it differs from id, see arenaDef),
+// arena (true for arena variants), obstacles (see js/obstacles.js).
+const BUILTIN_TRACKS = [
   {
     id: 'meadow',
     seed: 11,
@@ -17,6 +21,14 @@ export const TRACKS = [
     ],
     itemRows: [0.13, 0.4, 0.63, 0.86],
     boostPads: [[0.27, 0], [0.52, -3], [0.76, 3]],
+    obstacles: [
+      { kind: 'ramp', at: 0.2, lat: 0, size: 6 },
+      { kind: 'popper', at: 0.34, lat: 0, period: 3, skin: 'mole' },
+      { kind: 'crosser', at: 0.44, count: 5, speed: 2.5, skin: 'sheep' },
+      { kind: 'roller', at: 0.575, count: 2, size: 1.6, period: 4, skin: 'hay' },
+      { kind: 'bouncer', at: 0.735, lat: -3, size: 2.2, skin: 'mushroom' },
+      { kind: 'cones', at: 0.93, lat: 3, count: 6, skin: 'cone' },
+    ],
   },
   {
     id: 'canyon',
@@ -31,6 +43,14 @@ export const TRACKS = [
     ],
     itemRows: [0.1, 0.33, 0.57, 0.8],
     boostPads: [[0.2, 0], [0.47, 2], [0.7, -2], [0.93, 0]],
+    obstacles: [
+      { kind: 'ramp', at: 0.14, lat: 0, size: 6, skin: 'rock' },
+      { kind: 'roller', at: 0.3, count: 2, size: 1.5, period: 4, skin: 'tumbleweed' },
+      { kind: 'cones', at: 0.43, lat: -3, count: 6, skin: 'cone' },
+      { kind: 'traffic', at: 0.635, count: 2, speed: 8, lat: 3, skin: 'cart' },
+      { kind: 'bouncer', at: 0.755, lat: 3, size: 2.2, skin: 'pad' },
+      { kind: 'spinner', at: 0.97, lat: -6, size: 6, period: 5 },
+    ],
   },
   {
     id: 'island',
@@ -45,6 +65,14 @@ export const TRACKS = [
     ],
     itemRows: [0.12, 0.36, 0.6, 0.84],
     boostPads: [[0.24, 0], [0.5, 0], [0.74, -3]],
+    obstacles: [
+      { kind: 'crosser', at: 0.19, count: 4, speed: 2.5, skin: 'crab' },
+      { kind: 'roller', at: 0.3, count: 2, size: 1.6, period: 4, skin: 'beach' },
+      { kind: 'cones', at: 0.42, lat: 2, count: 7, skin: 'coconut' },
+      { kind: 'popper', at: 0.555, lat: 0, period: 3, skin: 'geyser' },
+      { kind: 'ramp', at: 0.645, lat: 0, size: 6 },
+      { kind: 'bouncer', at: 0.915, lat: -3, size: 2.2, skin: 'pad' },
+    ],
   },
   {
     id: 'snow',
@@ -59,11 +87,47 @@ export const TRACKS = [
     ],
     itemRows: [0.09, 0.3, 0.52, 0.72, 0.9],
     boostPads: [[0.18, 0], [0.42, 2], [0.63, -2], [0.83, 0]],
+    obstacles: [
+      { kind: 'crosser', at: 0.135, count: 4, speed: 2.3, skin: 'penguin' },
+      { kind: 'roller', at: 0.235, count: 2, size: 1.7, period: 4.5, skin: 'snowball' },
+      { kind: 'bouncer', at: 0.335, lat: 3, size: 2.2, skin: 'pad' },
+      { kind: 'ramp', at: 0.565, lat: 0, size: 6, skin: 'snowramp' },
+      { kind: 'slick', at: 0.775, lat: 0, size: 4.2, skin: 'ice' },
+      { kind: 'cones', at: 0.955, lat: -3, count: 5, skin: 'cone' },
+    ],
   },
 ];
 
+// The four built-in worlds first, then every registered world pack (see js/worlds/index.js).
+export const TRACKS = BUILTIN_TRACKS.concat(WORLD_PACKS.map((p) => Object.assign({}, p.track, { id: p.id })));
+
+// A pack's names for the track picker live in its own `strings: { en: { name, sub }, nl: { ... } }`.
+for (const p of WORLD_PACKS) {
+  const pack = {};
+  for (const l in p.strings) pack[l] = { tracks: { [p.id]: p.strings[l].name }, trackSub: { [p.id]: p.strings[l].sub } };
+  addStrings(pack);
+}
+
 export function trackById(id) {
   return TRACKS.find((t) => t.id === id) || TRACKS[0];
+}
+
+// The arena variant of a world: a wide rounded-square ring road in the same look (theme and landscape seed),
+// for battle modes. The ring is a normal closed track, so all the track maths keeps working. Karts drive it in
+// both directions. The fence sits at the track limit (limitPad), the island in the middle is kept clear.
+export function arenaDef(worldId) {
+  const base = trackById(worldId), A = 60, B = 45, P = 2.6, n = 32, Y = 2;
+  const points = [], sg = (v) => (v < 0 ? -1 : 1);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU, s = Math.sin(a), c = Math.cos(a);
+    points.push([sg(s) * Math.pow(Math.abs(s), 2 / P) * A, sg(c) * Math.pow(Math.abs(c), 2 / P) * B, Y]);
+  }
+  const rows = [], R = 8;
+  for (let i = 0; i < R; i++) rows.push((i + 0.5) / R);
+  return {
+    id: `${base.id}-arena`, theme: base.id, arena: true, seed: base.seed, scale: 1, width: 26, limitPad: 1.3, points,
+    itemRows: rows, itemLats: [-7, 0, 7], boostPads: [], obstacles: [],
+  };
 }
 
 const HASH = 40; // spatial hash cell size (metres)
@@ -74,7 +138,7 @@ export class Track {
     this.id = def.id;
     this.halfWidth = def.width / 2;
     this.curb = 1.1;
-    this.limit = this.halfWidth + 7; // how far karts may stray from the centre line
+    this.limit = this.halfWidth + (def.limitPad === undefined ? 7 : def.limitPad); // how far karts may stray from the centre line (arenas: right up to the fence)
     const sc = def.scale || 1;
     const pts = def.points.map((p) => new THREE.Vector3(p[0] * sc, p[2] || 0, p[1] * sc));
     const curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');
@@ -227,12 +291,12 @@ export class Track {
     return this.heading[i0] + angleDiff(this.heading[i0], this.heading[i1]) * f;
   }
 
-  // Largest absolute curvature in the next `metres` of road.
-  maxCurvAhead(i, metres) {
+  // Largest absolute curvature in the next `metres` of road (dir = -1 looks the other way round the loop).
+  maxCurvAhead(i, metres, dir = 1) {
     const steps = Math.ceil(metres / this.seg);
     let m = 0;
     for (let k = 0; k <= steps; k += 2) {
-      const c = Math.abs(this.curv[this.wrap(i + k)]);
+      const c = Math.abs(this.curv[this.wrap(i + k * dir)]);
       if (c > m) m = c;
     }
     return m;

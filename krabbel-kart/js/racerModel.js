@@ -56,31 +56,36 @@ export function buildRacerModel(driver, vehicle) {
   const root = new THREE.Group();
   const tilt = new THREE.Group();
   const body = new THREE.Group();
-  root.add(tilt); tilt.add(body);
+  const anim = new THREE.Group(); // identity layer for the Animator: everything but the shield hangs below it
+  root.add(tilt); tilt.add(body); body.add(anim);
   const pv = getPuffy(vehicle, 'vehicle');
   const pd = getPuffy(driver, 'driver');
-  let len = VEH_LEN, seatY = 0.8;
+  let len = VEH_LEN, seatY = 0.8, vehicleMesh = null, driverMesh = null;
   if (pv) {
     const vm = new THREE.Mesh(pv.geometry, [pv.faceMat, pv.rimMat]);
     vm.scale.setScalar(pv.scale);
     vm.rotation.y = -Math.PI / 2; // drawing's right-hand side becomes "forward"
     vm.position.y = 0.05;
     vm.castShadow = true;
-    body.add(vm);
+    anim.add(vm);
+    vehicleMesh = vm;
     len = pv.wn * pv.scale;
     seatY = pv.top(0.44) * pv.scale + 0.05;
   }
   const pivot = new THREE.Group();
+  const driverAnim = new THREE.Group(); // identity layer between the seat pivot and the drawing
+  pivot.add(driverAnim);
   let driverH = DRV_H;
   if (pd) {
     driverH = pd.hn * pd.scale;
     const dm = new THREE.Mesh(pd.geometry, pd.faceMat);
     dm.scale.setScalar(pd.scale);
     dm.castShadow = true;
-    pivot.add(dm);
+    driverAnim.add(dm);
+    driverMesh = dm;
   }
   pivot.position.set(0, Math.max(0.12, seatY - driverH * 0.3), (0.44 - 0.5) * len);
-  body.add(pivot);
+  anim.add(pivot);
 
   if (!shieldGeo) shieldGeo = new THREE.IcosahedronGeometry(1, 4);
   // Soap-bubble look: clear in the middle, bright towards the rim.
@@ -109,7 +114,8 @@ export function buildRacerModel(driver, vehicle) {
   shadow.renderOrder = 0.7;
 
   const topY = pivot.position.y + driverH;
-  return { root, tilt, body, pivot, shield, shadow, len, topY };
+  // root > tilt > body > anim > (vehicleMesh, pivot > driverAnim > driverMesh); shield hangs on body.
+  return { root, tilt, body, anim, pivot, driverAnim, vehicleMesh, driverMesh, shield, shadow, len, topY };
 }
 
 export function disposeRacerModel(m) {

@@ -3,6 +3,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { buildRacerModel, disposeRacerModel } from './racerModel.js';
 import { Particles } from './particles.js';
+import { Animator } from './anim.js';
 import { makeCanvas, canvasTexture, clamp } from './util.js';
 
 const CONFETTI = [0xff4b4b, 0xffa53c, 0xffe14a, 0x5fe06a, 0x4fb8ff, 0xb46bff, 0xff7ac0];
@@ -65,7 +66,9 @@ export class Ceremony {
     this.actors = [];
     ranking.forEach((e, i) => {
       const model = buildRacerModel(e.driver, e.vehicle);
-      const a = { model, rank: i, phase: i * 1.7, baseY: 0 };
+      const a = { model, rank: i, phase: i * 1.7, baseY: 0, animator: new Animator(model, { podium: true, rank: i, id: e.driver.id }) };
+      // Winners jump the most; the crowd cheers a little, with every cheer out of step.
+      a.animator.play('win', { loop: true, strength: i < 3 ? [1, 0.85, 0.72][i] : 0.45, delay: i < 3 ? i * 0.3 : 0.3 + (i % 4) * 0.35 });
       if (i < 3) {
         const st = STEPS[i];
         model.root.position.set(st.x, st.h, 0);
@@ -117,19 +120,14 @@ export class Ceremony {
     this.focus = this._l;
 
     for (const a of this.actors) {
-      const m = a.model, win = a.rank < 3;
-      const speed = win ? 3.4 - a.rank * 0.35 : 2.6;
-      const hop = Math.abs(Math.sin(t * speed + a.phase));
-      const amp = win ? 0.55 - a.rank * 0.13 : (Math.sin(t * 0.7 + a.phase * 2) > 0.2 ? 0.22 : 0.04);
-      m.root.position.y = a.baseY + hop * amp;
-      const squash = (1 - hop) * 0.12 * (win ? 1 : 0.5);
-      m.body.scale.set(1 + squash, 1 - squash, 1 + squash);
-      m.body.rotation.z = Math.sin(t * speed * 0.5 + a.phase) * (win ? 0.09 : 0.04);
+      const m = a.model;
+      m.root.position.y = a.baseY;
       if (a.faceCam) {
         // The driver looks at the camera while the vehicle shows its side.
         m.pivot.rotation.y = -m.root.rotation.y + ang + Math.sin(t * 1.3 + a.phase) * 0.15;
         m.pivot.rotation.z = Math.sin(t * 4 + a.phase) * 0.12;
       }
+      a.animator.update(dt, t, null);
     }
     if (this.trophy) {
       this.trophy.rotation.y = t * 1.6;
@@ -163,7 +161,7 @@ export class Ceremony {
 
   dispose() {
     this.world.scene.remove(this.group);
-    for (const a of this.actors) disposeRacerModel(a.model);
+    for (const a of this.actors) { a.animator.dispose(); disposeRacerModel(a.model); }
     for (const d of this.disposables) d.dispose();
     this.particles.dispose();
   }

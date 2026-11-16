@@ -83,7 +83,7 @@ const S = {
     loading: 'Loading…',
     exportPng: 'Download',
     singleRace: 'Single race',
-    tournament: 'Tournament',
+    tournament: 'Grand Prix',
     cupSub: 'All 4 tracks. Points in every race, podium at the end.',
     race: 'Race',
     standings: 'Standings',
@@ -91,10 +91,16 @@ const S = {
     toPodium: 'To the podium!',
     pts: 'pt',
     champion: 'Champion!',
-    newTournament: 'New tournament',
+    newTournament: 'New Grand Prix',
     fancy: 'Shadows and details',
     fancyHint: 'Turn off if the game stutters',
     playAnyway: 'Play like this',
+    howOld: 'How old are you?',
+    ageLittle: '4 to 6',
+    ageBig: '7 to 10',
+    pickMode: 'What do you want to play?',
+    lastPlayed: 'Last time',
+    laps: 'Laps',
     tracks: {
       meadow: 'Tulip Valley',
       canyon: 'Sunset Canyon',
@@ -191,7 +197,7 @@ const S = {
     loading: 'Laden…',
     exportPng: 'Download',
     singleRace: 'Losse race',
-    tournament: 'Toernooi',
+    tournament: 'Grote Prijs',
     cupSub: 'Alle 4 banen. Punten per race, podium aan het eind.',
     race: 'Race',
     standings: 'Stand',
@@ -199,10 +205,16 @@ const S = {
     toPodium: 'Naar het podium!',
     pts: 'pt',
     champion: 'Kampioen!',
-    newTournament: 'Nieuw toernooi',
+    newTournament: 'Nieuwe Grote Prijs',
     fancy: 'Schaduwen en details',
     fancyHint: 'Zet uit als het spel hapert',
     playAnyway: 'Zo spelen',
+    howOld: 'Hoe oud ben je?',
+    ageLittle: '4 tot 6',
+    ageBig: '7 tot 10',
+    pickMode: 'Wat wil je doen?',
+    lastPlayed: 'Vorige keer',
+    laps: 'Rondes',
     tracks: {
       meadow: 'Tulpendal',
       canyon: 'Zonsondergang Canyon',
@@ -217,6 +229,24 @@ const S = {
     },
   },
 };
+
+// Feature files bring their own strings: addStrings({ en: { ... }, nl: { ... } }).
+// Nested objects are merged key by key, so `tracks.candy` can be added next to `tracks.meadow`.
+function merge(dst, src) {
+  for (const k in src) {
+    const v = src[k];
+    if (v && typeof v === 'object' && !Array.isArray(v)) {
+      if (!dst[k] || typeof dst[k] !== 'object' || Array.isArray(dst[k])) dst[k] = {};
+      merge(dst[k], v);
+    } else dst[k] = v;
+  }
+}
+export function addStrings(pack) {
+  for (const l in pack) {
+    if (!S[l]) S[l] = {};
+    merge(S[l], pack[l]);
+  }
+}
 
 let lang = 'en';
 export function setLang(l) { lang = S[l] ? l : 'en'; document.documentElement.lang = lang; }

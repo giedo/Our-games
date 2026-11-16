@@ -1,18 +1,34 @@
 // Menus: title, player count, racer picker, track picker, results, pause, settings, sticker book.
 import { h, clear, ICON } from './dom.js';
-import { TRACKS } from './tracks.js';
+import { TRACKS, trackById } from './tracks.js';
 import { openMaker } from './editor.js';
 import { t, setLang, getLang } from './i18n.js';
 import { formatTime } from './util.js';
 import { saveSettings } from './store.js';
+import { MODES, modeById } from './modes/index.js';
+import { cupById, CUPS } from './cups.js';
+import { packById } from './worlds/index.js';
+import { ageOf } from './age.js';
 
 const LOGO_COLORS = ['#ff4b4b', '#ff9a1f', '#ffd21f', '#5fd048', '#3fb8ff', '#9a5cff', '#ff7ac0'];
+// Card pictures of the built-in worlds; a world pack brings its own `chip`.
 const TRACK_CHIPS = {
   meadow: 'linear-gradient(160deg,#8fd0ff 0 45%,#74c64a 45% 100%)',
   canyon: 'linear-gradient(160deg,#5a2f8a 0 30%,#ff8a4c 30% 55%,#b5472f 55% 100%)',
   island: 'linear-gradient(160deg,#7fd8ff 0 40%,#49e8d6 40% 62%,#f7e6ad 62% 100%)',
   snow: 'linear-gradient(160deg,#0a1440 0 35%,#3fe0a0 35% 48%,#15357a 48% 60%,#eaf4ff 60% 100%)',
 };
+
+function chipOf(id) {
+  const pack = packById(id);
+  return TRACK_CHIPS[id] || (pack && pack.chip) || '#cfd8e8';
+}
+
+// A trophy in a colour (cups and the medals on the cup cards).
+export function trophySvg(color, ink = '#2a2433') {
+  return `<svg viewBox="0 0 64 64" fill="none" stroke="${ink}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8h24v18a12 12 0 01-24 0z" fill="${color}"/><path d="M20 14h-9v5a9 9 0 009 9M44 14h9v5a9 9 0 01-9 9"/><path d="M32 38v10"/><path d="M22 56h20l-3-8H25z" fill="${color}"/><path d="M28 16l2 4 4 1-3 3 1 4-4-2-4 2 1-4-3-3 4-1z" fill="#fff" stroke-width="2.5"/></svg>`;
+}
+const MEDAL = ['#ffcf33', '#dfe7f0', '#e8a56a'];
 
 function thumbUrl(st) {
   if (!st._thumb) st._thumb = st.canvas.toDataURL('image/png');
@@ -59,18 +75,64 @@ export class UI {
         h('p', { class: 'keys-hint' }, t('driftTip'))));
   }
 
-  // ---------- how many players ----------
+  // ---------- how many players, and how old ----------
   _players() {
-    const g = this.g;
+    const g = this.g, s = g.settings;
     g.setMenuView('fly');
-    const pick = (n) => { this.players = n; this.show('racer', 0); };
+    const pick = (n) => { this.players = n; this.show('mode'); };
+    const ages = h('div', { class: 'age-row' });
+    const paintAges = () => {
+      clear(ages);
+      for (const [id, icon, label] of [['little', ICON.little, t('ageLittle')], ['big', ICON.big, t('ageBig')]]) {
+        ages.append(h('button', { class: `card age${ageOf(s) === id ? ' on' : ''}`, 'aria-pressed': ageOf(s) === id ? 'true' : 'false', onclick: () => {
+          this.click(); s.age = id; saveSettings(s); paintAges();
+        } }, h('span', { class: 'ic', html: icon }), h('b', null, label)));
+      }
+    };
+    paintAges();
     this.root.append(
       h('div', { class: 'screen center' },
         h('h2', { class: 'head' }, t('howMany')),
         h('div', { class: 'choice-row' },
           h('button', { class: 'card big', onclick: () => { this.click(); pick(1); } }, h('span', { class: 'ic', html: ICON.one }), h('b', null, t('players1'))),
           h('button', { class: 'card big', onclick: () => { this.click(); pick(2); } }, h('span', { class: 'ic', html: ICON.two }), h('b', null, t('players2')))),
+        h('h3', { class: 'head small' }, t('howOld')),
+        ages,
         this.btn('ghost', ICON.back, t('back'), () => this.show('title'))));
+  }
+
+  // The mode in the settings, or the plain race when the age setting does not allow it.
+  currentMode() {
+    const M = modeById(this.g.settings.mode);
+    return M.ages.indexOf(ageOf(this.g.settings)) >= 0 && (M.maxPlayers || 2) >= this.players ? M : modeById('race');
+  }
+
+  // The chosen options of a mode, with defaults filled in: { key: value }.
+  modeOpts(M) {
+    const saved = this.g.settings.modeOpts[M.id] || {}, out = {};
+    for (const o of M.options(this.g.settings)) out[o.key] = saved[o.key] !== undefined ? saved[o.key] : o.default;
+    return out;
+  }
+
+  // ---------- pick a game mode ----------
+  _mode() {
+    const g = this.g, s = g.settings, age = ageOf(s);
+    g.setMenuView('fly');
+    const last = this.currentMode();
+    const card = (M) => h('button', { class: `card mode${M === last ? ' on' : ''}`, onclick: () => {
+      this.click(); s.mode = M.id; saveSettings(s); this.show('racer', 0);
+    } }, h('span', { class: 'ic', html: M.icon }), h('b', null, t(`modes.${M.id}`)), h('small', null, t(`modeSub.${M.id}`)),
+    M === last ? h('em', { class: 'last' }, t('lastPlayed')) : null);
+    // Two sections, Race and Battle, each a row of cards.
+    const avail = MODES.filter((M) => M.ages.indexOf(age) >= 0 && (M.maxPlayers || 2) >= this.players);
+    const groups = ['race', 'battle'].map((id) => ({ id, list: avail.filter((M) => (M.group || 'race') === id) })).filter((gr) => gr.list.length);
+    const body = h('div', { class: `mode-groups ${age}` }, groups.map((gr) => h('section', { class: `mode-group ${gr.id}` },
+      h('h3', { class: 'mode-label' }, t(`modeGroup.${gr.id}`)), h('div', { class: 'mode-cards' }, gr.list.map(card)))));
+    this.root.append(
+      h('div', { class: 'screen center' },
+        h('h2', { class: 'head' }, t('pickMode')),
+        body,
+        this.btn('ghost', ICON.back, t('back'), () => this.show('players'))));
   }
 
   // ---------- pick driver + vehicle ----------
@@ -116,7 +178,7 @@ export class UI {
     this.root.append(
       h('div', { class: 'screen racer' },
         h('div', { class: 'bar' },
-          this.btn('ghost', ICON.back, t('back'), () => (i > 0 ? this.show('racer', i - 1) : this.show('players'))),
+          this.btn('ghost', ICON.back, t('back'), () => (i > 0 ? this.show('racer', i - 1) : this.show('mode'))),
           h('h2', { class: `head p${i}` }, title),
           this.btn('go', ICON.next, t('next'), () => (i + 1 < this.players ? this.show('racer', i + 1) : this.show('track')))),
         h('div', { class: 'racer-panel' },
@@ -124,22 +186,23 @@ export class UI {
           h('div', { class: 'row' }, h('h3', null, t('vehicles')), strip('vehicle')))));
   }
 
-  // ---------- pick track ----------
+  // ---------- pick track (and the options of the mode) ----------
   _track() {
-    const g = this.g, s = g.settings;
+    const g = this.g, s = g.settings, M = this.currentMode();
     g.setMenuView('fly');
-    const cup = () => s.mode === 'cup';
+    const series = M.series;
+    // A Grand Prix shows its tracks in racing order; other modes let you pick any world.
+    const list = TRACKS;
     const cards = h('div', { class: 'track-cards' });
     const fill = () => {
       clear(cards);
-      cards.classList.toggle('cup', cup());
-      TRACKS.forEach((def, i) => {
+      list.forEach((def, i) => {
         cards.append(h('button', { class: `card track${s.track === def.id ? ' on' : ''}`, onclick: () => {
           this.click();
           if (s.track === def.id) return;
           s.track = def.id; saveSettings(s); fill();
           g.loadWorld(def.id);
-        } }, h('i', { class: 'chip', style: { background: TRACK_CHIPS[def.id] } }, cup() ? h('em', null, String(i + 1)) : null),
+        } }, h('i', { class: 'chip', style: { background: chipOf(def.id) } }, M.cardNote && M.cardNote(def.id, s) ? h('em', { class: 'note' }, M.cardNote(def.id, s)) : null),
         h('b', null, t(`tracks.${def.id}`)), h('small', null, t(`trackSub.${def.id}`))));
       });
     };
@@ -154,44 +217,69 @@ export class UI {
       paint();
       return box;
     };
-    const hint = h('p', { class: 'cup-hint' });
-    const title = h('h2', { class: 'head' });
-    const paintMode = () => { hint.textContent = cup() ? t('cupSub') : ''; title.textContent = cup() ? t('tournament') : t('pickTrack'); fill(); };
-    const mode = seg([['single', t('singleRace')], ['cup', t('tournament')]], () => s.mode || 'single', (v) => { s.mode = v; paintMode(); });
     const diff = seg([['easy', t('easy')], ['normal', t('normal')], ['fast', t('fast')]], () => s.difficulty, (v) => { s.difficulty = v; });
-    paintMode();
+    const modeOpts = M.options(s).map((o) => h('div', { class: 'diff' }, h('span', null, o.label), seg(o.values,
+      () => this.modeOpts(M)[o.key], (v) => { if (!s.modeOpts[M.id]) s.modeOpts[M.id] = {}; s.modeOpts[M.id][o.key] = v; })));
+    fill();
+    // Grand Prix: pick one of the cups instead of a world.
+    const hint = h('p', { class: 'cup-hint' });
+    const cupBox = h('div', { class: 'cup-cards' });
+    const fillCups = () => {
+      clear(cupBox);
+      const cur = cupById(s.cup), best = s.cupBest || {};
+      hint.textContent = `${cur.tracks.length} ${t('cupRaces')}. ${t('cupHint')}`;
+      for (const c of CUPS) {
+        cupBox.append(h('button', { class: `card cup${c.id === cur.id ? ' on' : ''}`, onclick: () => { this.click(); s.cup = c.id; saveSettings(s); fillCups(); } },
+          h('span', { class: 'tr', html: trophySvg(c.color) }), h('b', null, t(`cups.${c.id}`)),
+          h('span', { class: 'chips' }, c.tracks.map((id) => h('i', { class: 'chip', style: { background: chipOf(id) } }))),
+          best[c.id] ? h('em', { class: 'best', html: trophySvg(MEDAL[best[c.id] - 1]), title: t('cupBest') }) : null));
+      }
+    };
+    if (series) fillCups();
+    const showCards = M.needsTrack !== false && !series;
+    const little = ageOf(s) === 'little';
+    // Little ones: no lap or item choices, but a big steering help button that is easy to find.
+    const assistBtn = little ? h('button', { class: `toggle assist${s.assist ? ' on' : ''}`, onclick: () => { s.assist = !s.assist; saveSettings(s); g.audio.play('click'); assistBtn.className = `toggle assist${s.assist ? ' on' : ''}`; assistBtn.lastChild.textContent = s.assist ? t('on') : t('off'); } },
+      h('span', { class: 'ic', html: ICON.wheel }), h('span', { class: 'lb' }, t('steerHelp')), h('i', null, s.assist ? t('on') : t('off'))) : null;
     this.root.append(
-      h('div', { class: 'screen trackpick' },
+      h('div', { class: `screen trackpick${little ? ' little' : ''}` },
         h('div', { class: 'bar' },
           this.btn('ghost', ICON.back, t('back'), () => this.show('racer', this.players - 1)),
-          title,
+          h('h2', { class: 'head' }, series ? t(`modes.${M.id}`) : showCards ? t('pickTrack') : t(`modes.${M.id}`)),
           this.btn('go', ICON.play, t('start'), () => this.startRace())),
-        h('div', { class: 'track-bottom' }, hint, cards,
-          h('div', { class: 'opts' }, mode, h('div', { class: 'diff' }, h('span', null, t('speed')), diff)))));
+        h('div', { class: 'track-bottom' }, series ? hint : null, series ? cupBox : null, showCards ? cards : null,
+          h('div', { class: 'opts' }, little ? null : modeOpts, h('div', { class: 'diff' }, h('span', null, t('speed')), diff), assistBtn))));
+    // Bring the chosen world into view when there are more cards than fit.
+    const on = cards.querySelector('.on');
+    if (on) requestAnimationFrame(() => { cards.scrollLeft = on.offsetLeft - (cards.clientWidth - on.offsetWidth) / 2; });
+    cards.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && cards.scrollWidth > cards.clientWidth) { cards.scrollLeft += e.deltaY; e.preventDefault(); }
+    }, { passive: false });
   }
 
   startRace() {
-    const g = this.g, s = g.settings;
+    const g = this.g, s = g.settings, M = this.currentMode();
     const picks = [];
     for (let i = 0; i < this.players; i++) picks.push({ driver: g.book.get(s.picks[i].driver), vehicle: g.book.get(s.picks[i].vehicle) });
     this.hide();
-    if (s.mode === 'cup') g.startCup({ players: picks, difficulty: s.difficulty });
-    else { g.cup = null; g.startRace({ trackId: s.track, players: picks, difficulty: s.difficulty }); }
+    if (M.series) g.startCup({ players: picks, difficulty: s.difficulty, cup: s.cup });
+    else { g.cup = null; g.startRace({ mode: M.id, opts: this.modeOpts(M), trackId: s.track, players: picks, difficulty: s.difficulty }); }
   }
 
   // ---------- results ----------
   _results({ results, cup }) {
     const g = this.g;
     const list = h('ol', { class: 'res-list' });
-    for (const r of results) {
-      list.append(h('li', { class: r.human ? `me p${r.playerIndex}` : '' },
+    for (const r of results.rows) {
+      const team = r.team === 0 || r.team === 1 ? ` team${r.team}` : '';
+      list.append(h('li', { class: `${r.human ? `me p${r.playerIndex}` : ''}${team}` },
         h('span', { class: 'pl' }, String(r.place)),
         h('img', { src: thumbUrl(r.driver), alt: '' }),
         h('span', { class: 'nm' }, r.name),
-        h('span', { class: 'tm' }, r.time === null ? '' : formatTime(r.time)),
-        cup ? h('span', { class: 'pt' }, `+${r.points}`) : null));
+        r.time !== undefined ? h('span', { class: 'tm' }, r.time === null ? '' : formatTime(r.time)) : null,
+        (r.extra || []).map((x) => h('span', { class: x.cls || 'xc' }, String(x.text)))));
     }
-    const head = cup ? `${t('race')} ${cup.index + 1}/${cup.tracks.length}` : t('results');
+    const head = results.headline || (cup ? `${t(`cups.${cup.id}`)} ${cup.index + 1}/${cup.tracks.length}` : t('results'));
     const buttons = cup
       ? [this.btn('go', ICON.next, t('standings'), () => this.show('standings'))]
       : [this.btn('go', ICON.rotate, t('again'), () => { this.hide(); g.restartRace(); }),
@@ -199,7 +287,7 @@ export class UI {
         this.btn('ghost', ICON.close, t('menu'), () => { g.quitToMenu(); this.show('title'); })];
     this.root.append(
       h('div', { class: 'screen center' },
-        h('div', { class: 'panel results' }, h('h2', null, head), list, h('div', { class: 'btn-row' }, buttons))));
+        h('div', { class: `panel results${results.wide ? ' wide' : ''}` }, h('h2', null, head), list, h('div', { class: 'btn-row' }, buttons))));
   }
 
   standingsList(ranking) {
@@ -250,8 +338,8 @@ export class UI {
           h('div', { class: 'btn-row' },
             this.btn('', ICON.wheel, t('standings'), showTable),
             this.btn('go', ICON.rotate, t('newTournament'), () => {
-              const players = g.cup.players, difficulty = g.cup.difficulty;
-              this.hide(); g.startCup({ players, difficulty });
+              const players = g.cup.players, difficulty = g.cup.difficulty, cup = g.cup.id;
+              this.hide(); g.startCup({ players, difficulty, cup });
             }),
             this.btn('ghost', ICON.close, t('menu'), () => { g.quitToMenu(); this.show('title'); })))));
   }
@@ -265,6 +353,7 @@ export class UI {
           h('h2', null, t('paused')),
           h('div', { class: 'btn-col' },
             this.btn('go', ICON.play, t('resume'), () => g.setPaused(false)),
+            g.race && g.race.mode.canEnd() ? this.btn('', ICON.check, t('endHere'), () => g.endRaceNow()) : null,
             this.btn('', ICON.rotate, t('restart'), () => { g.setPaused(false); this.hide(); g.restartRace(); }),
             this.btn('ghost', ICON.close, t('quit'), () => { g.setPaused(false); g.quitToMenu(); this.show('title'); })),
           this.toggles(false))));

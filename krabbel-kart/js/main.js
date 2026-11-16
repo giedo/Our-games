@@ -1,20 +1,22 @@
 // Krabbel Kart: boots the game, owns the render loop and glues everything together.
 import * as THREE from '../vendor/three.module.min.js';
-import { trackById } from './tracks.js';
+import { trackById, arenaDef } from './tracks.js';
 import { World } from './world.js';
 import { Race } from './race.js';
+import { modeById } from './modes/index.js';
+import { cupById } from './cups.js';
+import { Animator } from './anim.js';
+import './items/index.js'; // registers the extra items
 import { Input } from './input.js';
 import { GameAudio } from './audio.js';
 import { StickerBook, loadSettings, saveSettings } from './store.js';
 import { buildRacerModel, disposeRacerModel } from './racerModel.js';
 import { UI } from './ui.js';
 import { Ceremony } from './ceremony.js';
-import { TRACKS } from './tracks.js';
 import { h, ICON } from './dom.js';
 import { setLang, detectLang, t } from './i18n.js';
 import { damp } from './util.js';
 
-const TOTAL_KARTS = 8;
 const CUP_POINTS = [10, 8, 6, 5, 4, 3, 2, 1];
 
 function shuffle(a) {
@@ -100,11 +102,13 @@ class Game {
   }
 
   // ----- worlds -----
-  buildWorld(id) {
-    if (this.world && this.world.def.id === id) return;
+  // A world id (menus, tournament) or a full track def (arena variants).
+  buildWorld(idOrDef) {
+    const def = typeof idOrDef === 'string' ? trackById(idOrDef) : idOrDef;
+    if (this.world && this.world.def.id === def.id) return;
     if (this.preview && this.world) this.world.scene.remove(this.preview.root, this.preview.shadow);
     if (this.world) this.world.dispose();
-    this.world = new World(trackById(id));
+    this.world = new World(def);
     this.applyGraphics();
     this.flyS = this.world.track.n * 0.03;
     this.camReady = false;
@@ -134,6 +138,7 @@ class Game {
   clearPreview() {
     if (!this.preview) return;
     if (this.world) this.world.scene.remove(this.preview.root, this.preview.shadow);
+    this.preview.animator.dispose();
     disposeRacerModel(this.preview);
     this.preview = null; this.previewPick = null;
   }
@@ -143,8 +148,9 @@ class Game {
     if (this.previewPick === key) return;
     this.clearPreview();
     this.preview = buildRacerModel(driver, vehicle);
+    this.preview.animator = new Animator(this.preview, { preview: true, id: driver.id });
     this.previewPick = key;
-    this.preview.pop = 1;
+    this.preview.animator.play('select');
     this.placePreview();
   }
 
@@ -164,10 +170,7 @@ class Game {
       this.orbit += dt * 0.42;
       p.set(c.x + Math.sin(this.orbit) * 7.6, c.y + 2.5, c.z + Math.cos(this.orbit) * 7.6);
       l.set(c.x, c.y + 1.15, c.z);
-      m.pop = damp(m.pop, 0, 6, dt);
-      const s = 1 + Math.sin(m.pop * Math.PI) * 0.25;
-      m.body.scale.set(s, 1 + m.pop * 0.3, s);
-      m.body.position.y = Math.abs(Math.sin(w.time * 2.2)) * 0.06;
+      m.animator.update(dt, w.time, null);
     } else {
       this.flyS += (dt * 13) / tr.seg;
       const sway = Math.sin(w.time * 0.21) * 5;
@@ -187,10 +190,11 @@ class Game {
   }
 
   // ----- racing -----
-  pickOpponents(players) {
+  // total = how many karts race altogether (the mode says), players included.
+  pickOpponents(players, total) {
     const used = new Set();
     for (const p of players) { used.add(p.driver.id); used.add(p.vehicle.id); }
-    const need = TOTAL_KARTS - players.length;
+    const need = Math.max(0, total - players.length);
     const choose = (kind) => {
       const mine = shuffle(this.book.custom.filter((s) => s.kind === kind && !used.has(s.id))).slice(0, 3);
       const rest = shuffle(this.book.builtin.filter((s) => s.kind === kind && !used.has(s.id)));
@@ -203,19 +207,23 @@ class Game {
     return d.map((driver, i) => ({ driver, vehicle: v[i] }));
   }
 
+  // cfg: { trackId, players: [{driver, vehicle}], difficulty, mode: mode id (default 'race'), opts: mode options,
+  //        label, opponents (optional), age (optional) }. Arena modes get the arena variant of the world.
   startRace(cfg) {
     this.lastCfg = cfg;
     this.ui.hide();
     this.loadingEl.classList.remove('hide');
     setTimeout(() => {
       this.clearPreview();
-      this.buildWorld(cfg.trackId);
+      const M = modeById(cfg.mode);
+      this.buildWorld(M.arena ? arenaDef(cfg.trackId) : cfg.trackId);
       if (this.race) this.endRace(true);
       this.hudRoot.replaceChildren();
       this.hudRoot.classList.toggle('two', cfg.players.length > 1);
       if (this.ceremony) this.endCeremony(true);
       this.race = new Race(this, this.world, {
-        players: cfg.players, opponents: cfg.opponents || this.pickOpponents(cfg.players), difficulty: cfg.difficulty, laps: 3, label: cfg.label,
+        players: cfg.players, opponents: cfg.opponents || this.pickOpponents(cfg.players, M.karts), difficulty: cfg.difficulty, label: cfg.label,
+        mode: M.id, opts: cfg.opts || {}, age: cfg.age,
       });
       this.pauseBtn = h('button', { class: 'pause-btn', 'aria-label': t('paused'), html: ICON.pause, onclick: (e) => { e.stopPropagation(); this.setPaused(true); } });
       this.hudRoot.append(this.pauseBtn);
@@ -240,26 +248,30 @@ class Game {
     if (!keepMusic) this.audio.startMusic('menu');
   }
 
+  // results: { headline, rows } from the mode (see Mode.results).
   onRaceDone(results) {
     const cup = this.cup;
     if (cup && !cup.scored[cup.index]) {
-      // Tournament: hand out points for this race.
+      // Grand Prix: hand out points for this race.
       cup.scored[cup.index] = true;
-      for (const r of results) {
+      for (const r of results.rows) {
         const e = cup.entries[r.index];
         r.points = CUP_POINTS[r.place - 1] || 0;
         e.points += r.points; e.places.push(r.place);
       }
     }
+    if (cup) for (const r of results.rows) r.extra = (r.extra || []).concat({ text: `+${r.points || 0}`, cls: 'pt' });
     this.ui.show('results', { results, cup });
   }
 
-  // ----- tournament -----
+  // ----- Grand Prix -----
+  // cfg: { players, difficulty, cup: cup id (default: the first cup in js/cups.js) }
   startCup(cfg) {
-    const opponents = this.pickOpponents(cfg.players);
+    const cupDef = cupById(cfg.cup);
+    const opponents = this.pickOpponents(cfg.players, modeById('race').karts);
     const entry = (p, human, i) => ({ driver: p.driver, vehicle: p.vehicle, name: p.driver.name, human, playerIndex: human ? i : -1, points: 0, places: [] });
     this.cup = {
-      tracks: TRACKS.map((tk) => tk.id), index: 0, scored: [], players: cfg.players, opponents, difficulty: cfg.difficulty,
+      id: cupDef.id, tracks: cupDef.tracks.slice(), index: 0, scored: [], players: cfg.players, opponents, difficulty: cfg.difficulty,
       entries: cfg.players.map((p, i) => entry(p, true, i)).concat(opponents.map((o, i) => entry(o, false, i))),
     };
     this.startCupRace();
@@ -268,7 +280,7 @@ class Game {
   startCupRace() {
     const c = this.cup;
     this.startRace({
-      trackId: c.tracks[c.index], players: c.players, opponents: c.opponents, difficulty: c.difficulty,
+      mode: 'race', trackId: c.tracks[c.index], players: c.players, opponents: c.opponents, difficulty: c.difficulty,
       label: `${t('race')} ${c.index + 1}/${c.tracks.length}`,
     });
   }
@@ -288,6 +300,12 @@ class Game {
 
   startCeremony() {
     const ranking = this.cupStandings();
+    // Remember the best result of a human player in this cup (1 = gold, 2 = silver, 3 = bronze).
+    const best = ranking.findIndex((e) => e.human) + 1;
+    if (this.cup && best >= 1 && best <= 3) {
+      const cb = this.settings.cupBest = this.settings.cupBest || {};
+      if (!cb[this.cup.id] || best < cb[this.cup.id]) { cb[this.cup.id] = best; saveSettings(this.settings); }
+    }
     this.endRace(true);
     this.ceremony = new Ceremony(this, this.world, ranking);
     this.audio.startMusic('podium');
@@ -301,6 +319,13 @@ class Game {
     this.ceremony = null;
     this.camReady = false;
     if (!keepMusic) this.audio.startMusic('menu');
+  }
+
+  // The pause menu's "End": show the results of the race as it stands.
+  endRaceNow() {
+    if (!this.race) return;
+    this.setPaused(false);
+    this.race.mode.endNow();
   }
 
   quitToMenu() {

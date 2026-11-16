@@ -91,12 +91,17 @@ export class StickerBook {
   }
 }
 
-const DEFAULTS = { sound: true, music: true, assist: false, fancy: true, lang: null, difficulty: 'normal', track: 'meadow', mode: 'single', picks: [{}, {}] };
+// mode = id of the game mode played last, modeOpts[modeId][key] = chosen option, age = 'little' | 'big'.
+const DEFAULTS = { sound: true, music: true, assist: false, fancy: true, lang: null, difficulty: 'normal', track: 'meadow', mode: 'race', age: 'little', modeOpts: {}, picks: [{}, {}] };
 
 export function loadSettings() {
   let s = {};
   try { s = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; } catch (e) { s = {}; }
-  return Object.assign({}, DEFAULTS, s);
+  const out = Object.assign({}, DEFAULTS, s);
+  if (out.mode === 'single') out.mode = 'race'; // older saves
+  if (out.age !== 'big') out.age = 'little';
+  if (!out.modeOpts || typeof out.modeOpts !== 'object') out.modeOpts = {};
+  return out;
 }
 
 export function saveSettings(s) {
