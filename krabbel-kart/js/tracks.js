@@ -80,15 +80,21 @@ export function trackById(id) {
   return TRACKS.find((t) => t.id === id) || TRACKS[0];
 }
 
-// The arena variant of a world: a wide ring road in the same look (theme and landscape seed),
-// for battle modes. The ring is a normal closed track, so all the track maths keeps working.
+// The arena variant of a world: a wide rounded-square ring road in the same look (theme and landscape seed),
+// for battle modes. The ring is a normal closed track, so all the track maths keeps working. Karts drive it in
+// both directions. The fence sits at the track limit (limitPad), the island in the middle is kept clear.
 export function arenaDef(worldId) {
-  const base = trackById(worldId), R = 55, n = 14;
-  const points = [];
-  for (let i = 0; i < n; i++) points.push([Math.sin((i / n) * TAU) * R, Math.cos((i / n) * TAU) * R, 0]);
+  const base = trackById(worldId), A = 60, B = 45, P = 2.6, n = 32, Y = 2;
+  const points = [], sg = (v) => (v < 0 ? -1 : 1);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU, s = Math.sin(a), c = Math.cos(a);
+    points.push([sg(s) * Math.pow(Math.abs(s), 2 / P) * A, sg(c) * Math.pow(Math.abs(c), 2 / P) * B, Y]);
+  }
+  const rows = [], R = 8;
+  for (let i = 0; i < R; i++) rows.push((i + 0.5) / R);
   return {
-    id: `${base.id}-arena`, theme: base.id, arena: true, seed: base.seed, scale: 1, width: 30, points,
-    itemRows: [0.1, 0.35, 0.6, 0.85], boostPads: [], obstacles: [],
+    id: `${base.id}-arena`, theme: base.id, arena: true, seed: base.seed, scale: 1, width: 26, limitPad: 1.3, points,
+    itemRows: rows, itemLats: [-7, 0, 7], boostPads: [], obstacles: [],
   };
 }
 
@@ -100,7 +106,7 @@ export class Track {
     this.id = def.id;
     this.halfWidth = def.width / 2;
     this.curb = 1.1;
-    this.limit = this.halfWidth + 7; // how far karts may stray from the centre line
+    this.limit = this.halfWidth + (def.limitPad === undefined ? 7 : def.limitPad); // how far karts may stray from the centre line (arenas: right up to the fence)
     const sc = def.scale || 1;
     const pts = def.points.map((p) => new THREE.Vector3(p[0] * sc, p[2] || 0, p[1] * sc));
     const curve = new THREE.CatmullRomCurve3(pts, true, 'centripetal');

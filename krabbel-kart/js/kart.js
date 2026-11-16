@@ -56,7 +56,7 @@ export class Kart {
     this.pushX = 0; this.pushZ = 0;
     this.pitch = 0; this.roll = 0; this.yawVis = 0; this.leanVis = 0; this.squash = 0; this.stretch = 0;
     this.offroad = false; this.wrongWayT = 0; this.steerNow = 0;
-    this.aiLane = 0; this.aiLaneTarget = 0; this.aiLaneT = 0; this.aiItemT = 0; this.aiHold = 0;
+    this.aiStuckT = 0; this.aiRevT = 0; this.aiPosT = 0; this.aiPx = 0; this.aiPz = 0; this.aiLane = 0; this.aiLaneTarget = 0; this.aiLaneT = 0; this.aiItemT = 0; this.aiHold = 0;
     this.ctl = { steer: 0, gas: 0, brake: 0, drift: false, item: false };
     this.emitAcc = 0;
     // The driver subtly turns towards whoever is looking, so the drawing stays readable.
@@ -159,6 +159,7 @@ export class Kart {
   hit(opts) {
     const o = opts || {};
     if (this.out || this.hitCool > 0 || this.finished || this.isImmune()) return false;
+    if (o.by && o.by !== this && this.team !== null && o.by.team === this.team) return false; // no friendly fire
     const P = this.race.particles;
     if (o.soft) {
       this.hitCool = 0.5; this.speed *= 0.75; this.squash = 1;
@@ -262,6 +263,20 @@ export class Kart {
       tx = _v.x; tz = _v.z;
     }
     const err = angleDiff(this.dir, Math.atan2(tx - this.x, tz - this.z));
+    // Blocked (fence, rival) with the pedal down: back up a moment, swinging the nose towards the goal.
+    if (this.aiRevT > 0) {
+      this.aiRevT -= dt; c.gas = 0; c.brake = 1; c.steer = clamp(err * 3, -1, 1); c.drift = false; c.item = false;
+      return c;
+    }
+    // Not getting anywhere (pressed against the fence or a rival) for a while: reverse out.
+    this.aiPosT += dt;
+    if (this.aiPosT > 0.5) {
+      const moved = Math.hypot(this.x - this.aiPx, this.z - this.aiPz);
+      this.aiPosT = 0; this.aiPx = this.x; this.aiPz = this.z;
+      if (this.race.state === 'racing' && moved < 1.3 && this.spinT <= 0 && !this.fx.frozen && !this.fx.flat) {
+        if (++this.aiStuckT >= 2) { this.aiRevT = 0.8; this.aiStuckT = 0; }
+      } else this.aiStuckT = 0;
+    }
     c.steer = clamp(-err * 3, -1, 1);
     // Slow down for bends, looking the way the kart is actually heading.
     const way = Math.abs(angleDiff(this.dir, tr.heading[this.idx])) < Math.PI / 2 ? 1 : -1;
@@ -269,6 +284,8 @@ export class Kart {
     const vCorner = 2.4 / (1.1 * kmax + 1.15 / BASE_MAX);
     c.gas = Math.abs(err) > 1.2 ? 0.6 : 1; c.brake = 0;
     if (this.speed > vCorner + 1) { c.gas = 0; if (this.speed > vCorner + 5) c.brake = 0.7; }
+    // Close to a goal that is off to the side: slow down instead of orbiting it.
+    if (Math.hypot(g.x - this.x, g.z - this.z) < 22 && Math.abs(err) > 0.7 && this.speed > 11) { c.gas = 0; c.brake = 0.5; }
     c.drift = false;
     this._aiItem(c, dt, kmax);
     return c;
@@ -359,6 +376,7 @@ export class Kart {
       this.lat = lim * sg; _loc.lat = this.lat;
       const diff = angleDiff(this.dir, tr.heading[this.idx]);
       if (Math.abs(diff) < Math.PI / 2) this.dir += diff * Math.min(1, 4 * dt);
+      else if (tr.def.arena) { const d2 = angleDiff(this.dir, tr.heading[this.idx] + Math.PI); if (Math.abs(d2) < Math.PI / 2) this.dir += d2 * Math.min(1, 4 * dt); }
       this.speed *= 1 - 0.6 * dt;
     }
     this.offroad = Math.abs(this.lat) > tr.halfWidth + tr.curb + 0.3;
@@ -414,7 +432,7 @@ export class Kart {
         race.onFinish(this);
       } else if (!this.finished) race.onLap(this);
     }
-    if (this.human) {
+    if (this.human && !tr.def.arena) {
       const off = Math.abs(angleDiff(this.dir, tr.heading[this.idx]));
       this.wrongWayT = off > 2.0 && this.speed > 3 ? this.wrongWayT + dt : 0;
     }

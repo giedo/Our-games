@@ -10,11 +10,11 @@ import cup from './cup.js';
 //
 // import time from './time.js';
 //
-// import balloon from './balloon.js';
+import balloon from './balloon.js';
 //
-// import stars from './stars.js';
+import stars from './stars.js';
 //
-// import flag from './flag.js';
+import flag from './flag.js';
 //
 // import roam from './roam.js';
 
@@ -25,11 +25,11 @@ export const MODES = [
   //
   // time,
   //
-  // balloon,
+  balloon,
   //
-  // stars,
+  stars,
   //
-  // flag,
+  flag,
   //
   // roam,
 ];

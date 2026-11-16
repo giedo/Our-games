@@ -165,10 +165,11 @@ export class ItemSystem {
     const hit = [];
     for (const k of this.race.karts) {
       if (k === owner || k.out || (k.finished && !o.finished) || k.isImmune()) continue;
+      if (owner && owner.team !== null && k.team === owner.team) continue; // no friendly fire
       if (o.skipCool && k.hitCool > 0) continue;
       const dx = k.x - x, dz = k.z - z;
       if (dx * dx + dz * dz >= r2 || Math.abs(k.y + ky - y) >= dy) continue;
-      k.hit({ by: owner, cause: o.cause, soft: o.soft, flat: o.flat });
+      k.hit({ by: o.by !== undefined ? o.by : owner, cause: o.cause, soft: o.soft, flat: o.flat });
       hit.push(k);
       if (o.first) break;
     }
@@ -349,7 +350,7 @@ class Puddle {
     this.mesh.scale.setScalar(Math.min(1, this.age * 4) * (this.life < 1 ? Math.max(0.01, this.life) : 1));
     if (this.life <= 0) return false;
     // The kart that dropped it is safe for a moment.
-    const hit = sys.hitKartsNear(this.x, this.y, this.z, Math.sqrt(5.3), this.age < 1.2 ? this.owner : null, { cause: 'puddle', ky: 0, dy: 1, skipCool: true, first: true, finished: true });
+    const hit = sys.hitKartsNear(this.x, this.y, this.z, Math.sqrt(5.3), this.age < 1.2 ? this.owner : null, { cause: 'puddle', by: this.owner, ky: 0, dy: 1, skipCool: true, first: true, finished: true });
     if (!hit.length) return true;
     sys.race.particles.burst(false, [this.color], 26, this.x, this.y + 0.3, this.z, 8, { size: 0.6, life: 0.7, gravity: 16 });
     sys.race.sfx('splat', hit[0]);
@@ -375,14 +376,35 @@ function planeGeometry() {
   return g;
 }
 
+// Signed shortest way round the loop from sample a to sample b.
+function arcTo(tr, a, b) {
+  let d = b - a;
+  if (d < -tr.n / 2) d += tr.n; else if (d > tr.n / 2) d -= tr.n;
+  return d;
+}
+
+// Arenas: the nearest rival (not a team mate, not out).
+function nearestRival(sys, kart) {
+  const tr = sys.world.track;
+  let best = null, bd = 1e9;
+  for (const k of sys.race.karts) {
+    if (k === kart || k.out || k.finished || (kart.team !== null && k.team === kart.team)) continue;
+    const d = Math.abs(arcTo(tr, kart.s, k.s));
+    if (d < bd) { bd = d; best = k; }
+  }
+  return best;
+}
+
 class Plane {
   constructor(sys, kart) {
     const tr = sys.world.track;
     this.kind = 'plane';
     this.mesh = sys.spawnMesh(sys.res('planeGeo', planeGeometry), sys.res('planeMat', () => new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, emissive: 0x777777 })));
     this.mesh.scale.setScalar(1.3);
-    this.s = kart.s + 3 / tr.seg; this.lat = kart.lat;
-    this.owner = kart; this.target = sys.race.kartAhead(kart);
+    this.arena = !!sys.world.def.arena; this.dirS = 1;
+    this.owner = kart; this.target = this.arena ? nearestRival(sys, kart) : sys.race.kartAhead(kart);
+    if (this.arena && this.target) this.dirS = arcTo(tr, kart.s, this.target.s) < 0 ? -1 : 1;
+    this.s = kart.s + (3 / tr.seg) * this.dirS; this.lat = kart.lat;
     this.life = 7;
     this.pos = new THREE.Vector3(kart.x, kart.y + 1.4, kart.z);
     this.prev = new THREE.Vector3();
@@ -394,11 +416,11 @@ class Plane {
     this.life -= dt;
     const t = this.target;
     if (t && !t.finished && !t.out) {
-      let ds = t.s - this.s;
-      if (ds < -tr.n / 2) ds += tr.n; else if (ds > tr.n / 2) ds -= tr.n;
-      this.lat += (t.lat - this.lat) * Math.min(1, dt * (ds < 20 / tr.seg ? 9 : 2.5));
+      const ds = arcTo(tr, this.s, t.s);
+      if (this.arena) this.dirS = ds < 0 ? -1 : 1;
+      this.lat += (t.lat - this.lat) * Math.min(1, dt * (Math.abs(ds) < 20 / tr.seg ? 9 : 2.5));
     }
-    this.s += (58 * dt) / tr.seg;
+    this.s += (58 * dt * this.dirS) / tr.seg;
     prev.copy(pos);
     tr.posAt(this.s, this.lat, pos);
     pos.y += 1.4 + Math.sin(time * 9 + this.wob) * 0.25;

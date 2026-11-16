@@ -221,14 +221,14 @@ export function geoArch(R, tube, rnd, colors) {
 export function scatter(w, o) {
   const out = [], rnd = w.rnd, tr = w.track, b = tr.bounds, info = {};
   const R = o.radius || 430;
-  const minD = o.minD !== undefined ? o.minD : tr.limit + 4;
+  const minD = o.minD !== undefined ? o.minD : Math.max(tr.limit, tr.halfWidth + 7) + 4;
   let tries = 0;
   while (out.length < o.count && tries < o.count * 40) {
     tries++;
     const a = rnd() * TAU, r = Math.sqrt(rnd()) * R;
     const x = b.cx + Math.cos(a) * r, z = b.cz + Math.sin(a) * r;
     tr.distInfo(x, z, info);
-    if (info.d < minD) continue;
+    if (info.d < minD || w.inIsland(x, z)) continue;
     if (o.maxD && info.d > o.maxD) continue;
     const h = w.heightAt(x, z);
     if (o.minH !== undefined && h < o.minH) continue;
@@ -250,7 +250,7 @@ export function alongTrack(w, o) {
     tr.posAt(s, lat, p);
     // Skip spots that are actually close to another part of the track.
     tr.distInfo(p.x, p.z, info);
-    if (info.d < Math.abs(lat) - 3) continue;
+    if (info.d < Math.abs(lat) - 3 || w.inIsland(p.x, p.z)) continue;
     const h = w.heightAt(p.x, p.z);
     if (o.minH !== undefined && h < o.minH) continue;
     out.push({ x: p.x, y: h - (o.sink || 0), z: p.z, ry: o.face ? tr.headingAt(s) + (side > 0 ? -Math.PI / 2 : Math.PI / 2) : rnd() * TAU, s: lerp(o.s0 || 1, o.s1 || o.s0 || 1, rnd()), side, trackS: s });
@@ -388,7 +388,7 @@ export function tulipFields(w, fields) {
     const s0 = frac * tr.n;
     const c0 = Math.floor(rnd() * palette.length);
     for (let row = 0; row < 14; row++) {
-      const lat = side * (tr.limit + 5.5 + row * 2.05);
+      const lat = side * (Math.max(tr.limit, tr.halfWidth + 7) + 5.5 + row * 2.05);
       const color = palette[(c0 + Math.floor(row / 2)) % palette.length];
       let prev = null;
       for (let k = -26; k <= 26; k++) {
@@ -397,7 +397,7 @@ export function tulipFields(w, fields) {
         const mx = (p.x + q.x) / 2, mz = (p.z + q.z) / 2;
         tr.distInfo(mx, mz, info);
         const h = w.heightAt(mx, mz);
-        const ok = info.d >= Math.abs(lat) - 2.5 && h > (w.waterLevel === undefined ? -1e9 : w.waterLevel + 0.6) && w.slopeAt(mx, mz) < 0.42;
+        const ok = info.d >= Math.abs(lat) - 2.5 && !w.inIsland(mx, mz) && h > (w.waterLevel === undefined ? -1e9 : w.waterLevel + 0.6) && w.slopeAt(mx, mz) < 0.42;
         if (!ok) { prev = null; continue; }
         const cur = {
           bl: new V3(p.x, w.heightAt(p.x, p.z) - 0.1, p.z), tl: new V3(p.x, w.heightAt(p.x, p.z) + TOP, p.z),
@@ -440,7 +440,7 @@ export function sprinkle(w, colors, count, size = 1) {
     const lat = sd * (tr.halfWidth + tr.curb + 2.8 + rnd() * rnd() * 26);
     tr.posAt(s, lat, p);
     tr.distInfo(p.x, p.z, info);
-    if (info.d < Math.abs(lat) - 2) continue;
+    if (info.d < Math.abs(lat) - 2 || w.inIsland(p.x, p.z)) continue;
     const h = w.heightAt(p.x, p.z);
     if (w.waterLevel !== undefined && h < w.waterLevel + 0.4) continue;
     list.push({ x: p.x, y: h - 0.02, z: p.z, ry: rnd() * 3, s: size * (0.7 + rnd() * 0.8), color: cols[Math.floor(rnd() * cols.length)] });
@@ -592,13 +592,15 @@ function island(w) {
     w.scene.add(m);
     w.updaters.push((dt, t) => { m.position.y = Math.sin(t * 1.1 + ph) * 0.25 - 0.1; m.rotation.z = Math.sin(t * 0.8 + ph) * 0.06; });
   }
-  // Volcano: glowing crater + rising smoke.
+  // Volcano: glowing crater + rising smoke (not in the middle of an arena island).
+  if (!w.inIsland(vol.x, vol.z)) {
   const cy = w.heightAt(vol.x, vol.z);
   const glow = new THREE.Mesh(new THREE.CircleGeometry(17, 14), new THREE.MeshBasicMaterial({ color: 0xff7a1a, fog: false }));
   glow.rotation.x = -Math.PI / 2; glow.position.set(vol.x, cy + 6, vol.z);
   w.scene.add(glow);
   w.updaters.push((dt, t) => { glow.material.color.setRGB(1, 0.32 + Math.sin(t * 2.3) * 0.1, 0.05); });
   w.addSmoke(vol.x, cy + 14, vol.z, 0xd8d0c8);
+  }
   sprinkle(w, [0xff6fae, 0xffffff, 0xffd21f, 0xff8a3c], 1100, 0.62);
   balloons(w, 3, [[0xff4b4b, 0xfff1a0], [0x2fd0d0, 0xffffff], [0xffcf33, 0xff7ac0]]);
 }
@@ -673,7 +675,7 @@ export function buildScenery(w) {
     sceneryNoFog: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }),
     sceneryDouble: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
   };
-  gantry(w);
+  if (!w.def.arena) gantry(w);
   buildTrackProps(w);
   const pack = packById(w.theme.id);
   if (pack) pack.scenery(w, KIT);
