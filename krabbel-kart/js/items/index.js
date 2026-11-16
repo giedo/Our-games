@@ -3,6 +3,9 @@
 // To switch one on, uncomment its import line. main.js loads this file, so the registrations
 // are done before the first race. The empty "//" lines are spacers on purpose, so
 // neighbouring uncomments by different people do not conflict.
+import './sfx.js';
+import './names.js';
+import '../stars.js';
 //
 // import './turbo3.js';
 //

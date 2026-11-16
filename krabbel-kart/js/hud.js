@@ -6,6 +6,8 @@ import { t } from './i18n.js';
 
 const DOT_COLORS = ['#ff4b4b', '#4fb8ff', '#ffa53c', '#5fe06a', '#b46bff', '#ff7ac0', '#2fd0d0', '#c9ced8'];
 
+const STAR_SVG = '<svg viewBox="0 0 64 64"><path d="M32 4l8 18 20 2-15 13 5 20-18-10-18 10 5-20L4 24l20-2z" fill="#ffd21f" stroke="#2a2433" stroke-width="5" stroke-linejoin="round"/></svg>';
+
 function el(tag, cls, html) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -32,10 +34,12 @@ export class Hud {
     this.vig = el('div', 'hud-vig');
     this.skip = el('div', 'hud-skip', t('tapToSkip'));
     const col = el('div', 'hud-col');
-    col.append(this.lap, this.time, this.extra);
+    this.stars = el('div', 'hud-stars');
+    this.itemName = el('div', 'hud-itemname');
+    col.append(this.lap, this.time, this.stars, this.extra);
     const tl = el('div', 'hud-tl');
     tl.append(this.pos, col);
-    root.append(this.vig, tl, this.map, this.msg, this.wrong, this.item, this.skip);
+    root.append(this.vig, tl, this.map, this.msg, this.wrong, this.item, this.itemName, this.skip);
     this._buildTouch(root);
     game.hudRoot.appendChild(root);
     this._cache = {};
@@ -108,12 +112,22 @@ export class Hud {
     this.msgT = dur;
   }
 
+  _itemName(id) {
+    const name = t('items.' + id);
+    if (name === 'items.' + id) return;
+    this.itemName.textContent = name;
+    this.itemName.classList.remove('show'); void this.itemName.offsetWidth;
+    this.itemName.classList.add('show');
+    this.nameT = 2.2;
+  }
+
   _set(key, value, fn) {
     if (this._cache[key] !== value) { this._cache[key] = value; fn(value); }
   }
 
   update(dt) {
     const k = this.kart, race = this.race;
+    if (this.nameT > 0) { this.nameT -= dt; if (this.nameT <= 0) this.itemName.classList.remove('show'); }
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.msg.className = 'hud-msg'; }
     // The mode decides what the place, lap and extra badges say.
     const info = race.mode.hudInfo(k);
@@ -158,10 +172,17 @@ export class Hud {
       this.item.classList.toggle('rolling', rolling);
       delete this._cache.badge; // the slot was rebuilt
       if (rolling) this.game.audio.play('tick', 0.6);
+      else if (v && d) this._itemName(v); // the roulette landed: show the name for a moment
     });
     const left = k.itemT > 0 ? Math.ceil(k.itemT) : k.itemUses > 1 ? k.itemUses : 0;
     this._set('badge', k.item && k.rollT <= 0 ? left : 0, (v) => {
       if (v) { this.badge.textContent = String(v); this.item.append(this.badge); } else this.badge.remove();
+    });
+    // Gold stars collected on the road (only races that have road stars).
+    this._set('stars', race.items.roadStars ? k.stars : 0, (v) => {
+      this.stars.classList.toggle('show', v > 0);
+      this.stars.innerHTML = v > 0 ? `<i>${STAR_SVG}</i><b>${v}</b>` : '';
+      if (v > 0) { this.stars.classList.remove('pop'); void this.stars.offsetWidth; this.stars.classList.add('pop'); }
     });
     this._set('wrong', k.wrongWayT > 1.2 && !k.finished, (v) => this.wrong.classList.toggle('show', v));
     this._set('boost', k.boostT > 0, (v) => this.vig.classList.toggle('show', v));
