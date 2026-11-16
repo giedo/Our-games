@@ -6,7 +6,7 @@
 import race from './race.js';
 import cup from './cup.js';
 
-// import knockout from './knockout.js';
+import knockout from './knockout.js';
 //
 // import time from './time.js';
 //
@@ -21,7 +21,7 @@ import flag from './flag.js';
 export const MODES = [
   race,
   cup,
-  // knockout,
+  knockout,
   //
   // time,
   //
