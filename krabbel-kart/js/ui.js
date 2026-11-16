@@ -237,14 +237,18 @@ export class UI {
     };
     if (series) fillCups();
     const showCards = M.needsTrack !== false && !series;
+    const little = ageOf(s) === 'little';
+    // Little ones: no lap or item choices, but a big steering help button that is easy to find.
+    const assistBtn = little ? h('button', { class: `toggle assist${s.assist ? ' on' : ''}`, onclick: () => { s.assist = !s.assist; saveSettings(s); g.audio.play('click'); assistBtn.className = `toggle assist${s.assist ? ' on' : ''}`; assistBtn.lastChild.textContent = s.assist ? t('on') : t('off'); } },
+      h('span', { class: 'ic', html: ICON.wheel }), h('span', { class: 'lb' }, t('steerHelp')), h('i', null, s.assist ? t('on') : t('off'))) : null;
     this.root.append(
-      h('div', { class: 'screen trackpick' },
+      h('div', { class: `screen trackpick${little ? ' little' : ''}` },
         h('div', { class: 'bar' },
           this.btn('ghost', ICON.back, t('back'), () => this.show('racer', this.players - 1)),
           h('h2', { class: 'head' }, series ? t(`modes.${M.id}`) : showCards ? t('pickTrack') : t(`modes.${M.id}`)),
           this.btn('go', ICON.play, t('start'), () => this.startRace())),
         h('div', { class: 'track-bottom' }, series ? hint : null, series ? cupBox : null, showCards ? cards : null,
-          h('div', { class: 'opts' }, modeOpts, h('div', { class: 'diff' }, h('span', null, t('speed')), diff)))));
+          h('div', { class: 'opts' }, little ? null : modeOpts, h('div', { class: 'diff' }, h('span', null, t('speed')), diff), assistBtn))));
     // Bring the chosen world into view when there are more cards than fit.
     const on = cards.querySelector('.on');
     if (on) requestAnimationFrame(() => { cards.scrollLeft = on.offsetLeft - (cards.clientWidth - on.offsetWidth) / 2; });

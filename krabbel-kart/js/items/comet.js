@@ -1,9 +1,9 @@
 // Comet Chalk: flies along the road to whoever is in first place and bursts there.
 import { registerItem } from '../items.js';
-import { addStrings } from '../i18n.js';
+import { addStrings, t } from '../i18n.js';
 import { Shot, litMat, geoOnce, starGeo, paint, puff, canHit, hudOf } from './common.js';
 
-addStrings({ en: { items: { comet: 'Comet Chalk' } }, nl: { items: { comet: 'Komeetkrijt' } } });
+addStrings({ en: { items: { comet: 'Comet Chalk' }, cometWarn: 'Comet coming for you!' }, nl: { items: { comet: 'Komeetkrijt' }, cometWarn: 'Een komeet komt eraan!' } });
 
 const CHALK = [0xffffff, 0x9fe9ff, 0xffe14a, 0xff7ac0];
 
@@ -12,9 +12,10 @@ class Comet extends Shot {
     super(sys, kart, { speed: 64, h: 1.6, life: 22, lead: 4 });
     this.target = target; this.age = 0;
     this.mesh = sys.spawnMesh(geoOnce(sys, 'comet', () => [
-      { geo: paint(starGeo(1.1, 0.5, 0.5), () => 0xffffff), color: 0xffffff },
-      { geo: paint(starGeo(1.35, 0.62, 0.3), () => 0x9fe9ff), color: 0x9fe9ff },
+      { geo: paint(starGeo(1.1, 0.5, 0.5), () => 0xffe14a), color: 0xffe14a },
+      { geo: paint(starGeo(1.35, 0.62, 0.3), () => 0xff4aa8), color: 0xff4aa8 },
     ]), litMat(sys));
+    this.mesh.scale.setScalar(2);
     sys.race.sfx('item-comet', kart);
   }
 
@@ -29,12 +30,12 @@ class Comet extends Shot {
     this.advance(dt);
     this.h = 1.6 + Math.sin(this.age * 12) * 0.3;
     this.face();
-    this.mesh.rotation.set(0, Math.atan2(this.pos.x - this.prev.x, this.pos.z - this.prev.z) + Math.PI / 2, this.age * 9);
-    for (let i = 0; i < 3; i++) {
+    this.mesh.rotation.set(0, Math.atan2(this.pos.x - this.prev.x, this.pos.z - this.prev.z), this.age * 9);
+    for (let i = 0; i < 5; i++) {
       const u = Math.random();
-      P.emit(true, CHALK[i % 4], { x: this.prev.x + (this.pos.x - this.prev.x) * u, y: this.pos.y + (Math.random() - 0.5) * 0.9, z: this.prev.z + (this.pos.z - this.prev.z) * u, life: 0.55, size: 0.9, size1: 0.1, a: 0.9 });
+      P.emit(true, CHALK[i % 4], { x: this.prev.x + (this.pos.x - this.prev.x) * u, y: this.pos.y + (Math.random() - 0.5) * 1.6, z: this.prev.z + (this.pos.z - this.prev.z) * u, life: 0.7, size: 1.4, size1: 0.2, a: 0.95 });
     }
-    if (Math.random() < 0.5) P.emit(false, 0xffffff, { x: this.pos.x, y: this.pos.y, z: this.pos.z, vy: 2, life: 0.9, size: 0.5, size1: 1.4, a: 0.35 });
+    if (Math.random() < 0.5) P.emit(false, 0xffffff, { x: this.pos.x, y: this.pos.y, z: this.pos.z, vy: 2, life: 0.9, size: 0.8, size1: 2, a: 0.25 });
     for (const k of sys.race.karts) {
       if (!canHit(k, this.owner) || k.hitCool > 0) continue;
       const dx = k.x - this.pos.x, dz = k.z - this.pos.z;
@@ -60,7 +61,7 @@ registerItem({
     if (!lead) return false;
     sys.add(new Comet(sys, kart, lead));
     const h = hudOf(sys, lead);
-    if (h) h.message('!', 0.8);
+    if (h) h.warn(t('cometWarn'), 3);
   },
   aiWants: (k) => k.place > 1,
 });

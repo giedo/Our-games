@@ -138,6 +138,8 @@ svg { width: 1.15em; height: 1.15em; display: block; }
 .seg button.on { background: var(--go); }
 .seg button + button { border-left: 3px solid var(--ink); }
 
+.trackpick.little .card.track small { display: none; }
+.toggle.assist { padding: 4px 12px; } .toggle.assist .ic { width: 28px; height: 28px; } .toggle.assist.on { background: var(--go); }
 .track-bottom .opts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 22px; }
 .cup-hint { min-height: 1.3em; font-weight: 600; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; text-align: center; }
 .card.track .chip { position: relative; }
@@ -284,6 +286,8 @@ body.touch .hud.split.p0 .hud-itemname { right: 20px; }
 .hud-msg.final { color: var(--pink); }
 @keyframes pop { from { transform: scale(.3) rotate(-8deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
 .hud-wrong { position: absolute; left: 50%; top: 56%; transform: translateX(-50%); background: var(--red); color: #fff; border: 5px solid var(--ink); border-radius: 18px; padding: 6px 22px; font-size: clamp(20px, 4vh, 32px); display: none; white-space: nowrap; }
+.hud-alert { position: absolute; left: 50%; top: 20%; transform: translateX(-50%); display: none; white-space: nowrap; background: var(--red); color: #fff; border: 5px solid var(--ink); border-radius: 999px; padding: 4px 22px; font-size: clamp(20px, 4.4vh, 34px); box-shadow: 0 5px 0 var(--ink); pointer-events: none; }
+.hud-alert.show { display: block; animation: blink .4s steps(2) infinite; }
 .hud-wrong.show { display: block; animation: blink .5s steps(2) infinite; }
 @keyframes blink { 50% { opacity: .35; } }
 .hud-vig { position: absolute; inset: 0; opacity: 0; transition: opacity .25s; background: radial-gradient(ellipse at 50% 55%, rgba(255, 255, 255, 0) 45%, rgba(255, 230, 120, .35) 78%, rgba(255, 140, 40, .55) 100%); }

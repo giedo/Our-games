@@ -12,7 +12,7 @@ export class RaceMode extends Mode {
   static options(settings) {
     return [
       { key: 'laps', label: t('laps'), values: [[2, '2'], [3, '3'], [5, '5']], default: 3 },
-      { key: 'items', label: t('items'), values: [['all', t('itemsAll')], ['turbo', t('itemsTurbo')], ['none', t('itemsNone')]], default: 'all' },
+      { key: 'items', label: t('itemsOpt'), values: [['all', t('itemsAll')], ['turbo', t('itemsTurbo')], ['none', t('itemsNone')]], default: 'all' },
     ];
   }
 

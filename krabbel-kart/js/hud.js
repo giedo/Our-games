@@ -31,6 +31,7 @@ export class Hud {
     this.map.width = 280; this.map.height = 280;
     this.msg = el('div', 'hud-msg');
     this.wrong = el('div', 'hud-wrong', t('wrongWay'));
+    this.alert = el('div', 'hud-alert'); this.alertT = 0;
     this.vig = el('div', 'hud-vig');
     this.banner = el('div', 'hud-banner');
     this.act = el('button', 'hud-act');
@@ -42,7 +43,7 @@ export class Hud {
     col.append(this.lap, this.time, this.stars, this.extra);
     const tl = el('div', 'hud-tl');
     tl.append(this.pos, col);
-    root.append(this.vig, tl, this.banner, this.act, this.map, this.msg, this.wrong, this.item, this.itemName, this.skip);
+    root.append(this.vig, tl, this.banner, this.act, this.map, this.msg, this.wrong, this.alert, this.item, this.itemName, this.skip);
     this._buildTouch(root);
     game.hudRoot.appendChild(root);
     this._cache = {};
@@ -107,6 +108,9 @@ export class Hud {
     g.stroke(); }
   }
 
+  // A blinking red warning pill (a projectile is coming for you).
+  warn(text, dur) { this.alert.textContent = text; this.alert.classList.add('show'); this.alertT = dur; }
+
   message(text, dur, cls = '') {
     this.msg.className = 'hud-msg';
     void this.msg.offsetWidth; // restart the pop animation
@@ -131,6 +135,7 @@ export class Hud {
   update(dt) {
     const k = this.kart, race = this.race;
     if (this.nameT > 0) { this.nameT -= dt; if (this.nameT <= 0) this.itemName.classList.remove('show'); }
+    if (this.alertT > 0) { this.alertT -= dt; if (this.alertT <= 0) this.alert.classList.remove('show'); }
     if (this.msgT > 0) { this.msgT -= dt; if (this.msgT <= 0) this.msg.className = 'hud-msg'; }
     // The mode decides what the place, lap and extra badges say.
     const info = race.mode.hudInfo(k);
