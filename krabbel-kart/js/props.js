@@ -1,6 +1,7 @@
 // Trackside dressing that every circuit gets: arrow signs and tyre walls in the
 // corners, and a grandstand with a cheering doodle crowd plus flags at the start.
 import * as THREE from '../vendor/three.module.min.js';
+import { buildArenaProps } from './arena.js';
 import { mergeColored, mat4, makeCanvas, canvasTexture, mulberry32 } from './util.js';
 
 const V3 = THREE.Vector3;
@@ -200,6 +201,7 @@ function startArea(w) {
 }
 
 export function buildTrackProps(w) {
+  if (w.def.arena) { buildArenaProps(w); return; }
   cornerSigns(w);
   tyreWalls(w);
   startArea(w);

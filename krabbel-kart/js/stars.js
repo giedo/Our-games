@@ -204,7 +204,7 @@ class StarField {
 
 SYSTEM_HOOKS.push((sys) => {
   const race = sys.race;
-  if ((race.world.def && race.world.def.arena) || race.mode.noRoadStars) return;
+  if ((race.world.def && race.world.def.arena) || race.mode.noRoadStars || race.mode.roadStars === false) return;
   sys.roadStars = true;
   sys.add(new StarField(sys));
 });

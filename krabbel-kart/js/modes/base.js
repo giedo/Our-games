@@ -4,7 +4,12 @@
 // the mode through the hooks below. This base class is a plain lap race: subclass it and
 // override only what differs (see race.js, and docs/DESIGN.md "Architecture (as built)").
 import { clamp } from '../util.js';
-import { t } from '../i18n.js';
+import { t, addStrings } from '../i18n.js';
+
+addStrings({
+  en: { modeGroup: { race: 'Race', battle: 'Battle' }, endHere: 'Show results', items: 'Items', itemsAll: 'All', itemsTurbo: 'Only turbo', itemsNone: 'None' },
+  nl: { modeGroup: { race: 'Racen', battle: 'Gevecht' }, endHere: 'Naar de uitslag', items: 'Spullen', itemsAll: 'Alles', itemsTurbo: 'Alleen turbo', itemsNone: 'Geen' },
+});
 
 const CONFETTI = [0xff4b4b, 0xffa53c, 0xffe14a, 0x5fe06a, 0x4fb8ff, 0xb46bff, 0xff7ac0];
 
@@ -123,6 +128,30 @@ export class Mode {
   // following the racing line (humans under autopilot too). Return null for normal racing.
   aiGoal(kart) { return null; }
 
+  // ---- optional hooks added by the race modes (all have working defaults) ----
+  // One line under the HUD: { text, sub?, cls? } or null. cls 'danger' pulses red, 'out' and 'go' colour it.
+  hudBanner(kart) { return null; }
+
+  // A button under the banner: { label, fn } or null.
+  hudAction(kart) { return null; }
+
+  // For a kart that is out: the kart its camera should follow (or null to orbit itself).
+  spectate(kart) { return null; }
+
+  // True to skip the 3-2-1 and start at once (free driving).
+  get skipCountdown() { return false; }
+
+  // False hides the wrong-way warning.
+  get showWrongWay() { return true; }
+
+  // The pause menu shows an "End" button when this is true; it shows the results instead of throwing them away.
+  canEnd() { return false; }
+
+  endNow() {
+    const r = this.race;
+    if (r.state === 'racing') { r.state = 'ending'; r.stateT = 3.4; }
+  }
+
   dispose() {}
 }
 
@@ -135,4 +164,6 @@ export class Mode {
 //   needsTrack  false: the track picker shows no world cards (the mode runs on settings.track as it is)
 //   series      true: a multi-race flow owned by main.js (the Grand Prix), the mode itself is not raced
 //   karts       how many karts race in total (players + computer racers)
-Object.assign(Mode, { id: 'mode', icon: '', ages: ['little', 'big'], arena: false, teams: false, needsTrack: true, series: false, karts: 8 });
+Object.assign(Mode, { id: 'mode', icon: '', ages: ['little', 'big'], arena: false, teams: false, needsTrack: true, series: false, karts: 8, group: 'race', maxPlayers: 2, humanRows: false });
+// group: 'race' | 'battle' (mode picker sections). maxPlayers: modes for one player only hide on the 2 player menu.
+// humanRows: the results list only the players. static cardNote(worldId, settings) -> text on the track card (optional).

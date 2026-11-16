@@ -221,14 +221,14 @@ export function geoArch(R, tube, rnd, colors) {
 export function scatter(w, o) {
   const out = [], rnd = w.rnd, tr = w.track, b = tr.bounds, info = {};
   const R = o.radius || 430;
-  const minD = o.minD !== undefined ? o.minD : tr.limit + 4;
+  const minD = o.minD !== undefined ? o.minD : Math.max(tr.limit, tr.halfWidth + 7) + 4;
   let tries = 0;
   while (out.length < o.count && tries < o.count * 40) {
     tries++;
     const a = rnd() * TAU, r = Math.sqrt(rnd()) * R;
     const x = b.cx + Math.cos(a) * r, z = b.cz + Math.sin(a) * r;
     tr.distInfo(x, z, info);
-    if (info.d < minD) continue;
+    if (info.d < minD || w.inIsland(x, z)) continue;
     if (o.maxD && info.d > o.maxD) continue;
     const h = w.heightAt(x, z);
     if (o.minH !== undefined && h < o.minH) continue;
@@ -250,7 +250,7 @@ export function alongTrack(w, o) {
     tr.posAt(s, lat, p);
     // Skip spots that are actually close to another part of the track.
     tr.distInfo(p.x, p.z, info);
-    if (info.d < Math.abs(lat) - 3) continue;
+    if (info.d < Math.abs(lat) - 3 || w.inIsland(p.x, p.z)) continue;
     const h = w.heightAt(p.x, p.z);
     if (o.minH !== undefined && h < o.minH) continue;
     out.push({ x: p.x, y: h - (o.sink || 0), z: p.z, ry: o.face ? tr.headingAt(s) + (side > 0 ? -Math.PI / 2 : Math.PI / 2) : rnd() * TAU, s: lerp(o.s0 || 1, o.s1 || o.s0 || 1, rnd()), side, trackS: s });
@@ -388,7 +388,7 @@ export function tulipFields(w, fields) {
     const s0 = frac * tr.n;
     const c0 = Math.floor(rnd() * palette.length);
     for (let row = 0; row < 14; row++) {
-      const lat = side * (tr.limit + 5.5 + row * 2.05);
+      const lat = side * (Math.max(tr.limit, tr.halfWidth + 7) + 5.5 + row * 2.05);
       const color = palette[(c0 + Math.floor(row / 2)) % palette.length];
       let prev = null;
       for (let k = -26; k <= 26; k++) {
@@ -397,7 +397,7 @@ export function tulipFields(w, fields) {
         const mx = (p.x + q.x) / 2, mz = (p.z + q.z) / 2;
         tr.distInfo(mx, mz, info);
         const h = w.heightAt(mx, mz);
-        const ok = info.d >= Math.abs(lat) - 2.5 && h > (w.waterLevel === undefined ? -1e9 : w.waterLevel + 0.6) && w.slopeAt(mx, mz) < 0.42;
+        const ok = info.d >= Math.abs(lat) - 2.5 && !w.inIsland(mx, mz) && h > (w.waterLevel === undefined ? -1e9 : w.waterLevel + 0.6) && w.slopeAt(mx, mz) < 0.42;
         if (!ok) { prev = null; continue; }
         const cur = {
           bl: new V3(p.x, w.heightAt(p.x, p.z) - 0.1, p.z), tl: new V3(p.x, w.heightAt(p.x, p.z) + TOP, p.z),
@@ -440,7 +440,7 @@ export function sprinkle(w, colors, count, size = 1) {
     const lat = sd * (tr.halfWidth + tr.curb + 2.8 + rnd() * rnd() * 26);
     tr.posAt(s, lat, p);
     tr.distInfo(p.x, p.z, info);
-    if (info.d < Math.abs(lat) - 2) continue;
+    if (info.d < Math.abs(lat) - 2 || w.inIsland(p.x, p.z)) continue;
     const h = w.heightAt(p.x, p.z);
     if (w.waterLevel !== undefined && h < w.waterLevel + 0.4) continue;
     list.push({ x: p.x, y: h - 0.02, z: p.z, ry: rnd() * 3, s: size * (0.7 + rnd() * 0.8), color: cols[Math.floor(rnd() * cols.length)] });
@@ -592,13 +592,15 @@ function island(w) {
     w.scene.add(m);
     w.updaters.push((dt, t) => { m.position.y = Math.sin(t * 1.1 + ph) * 0.25 - 0.1; m.rotation.z = Math.sin(t * 0.8 + ph) * 0.06; });
   }
-  // Volcano: glowing crater + rising smoke.
+  // Volcano: glowing crater + rising smoke (not in the middle of an arena island).
+  if (!w.inIsland(vol.x, vol.z)) {
   const cy = w.heightAt(vol.x, vol.z);
   const glow = new THREE.Mesh(new THREE.CircleGeometry(17, 14), new THREE.MeshBasicMaterial({ color: 0xff7a1a, fog: false }));
   glow.rotation.x = -Math.PI / 2; glow.position.set(vol.x, cy + 6, vol.z);
   w.scene.add(glow);
   w.updaters.push((dt, t) => { glow.material.color.setRGB(1, 0.32 + Math.sin(t * 2.3) * 0.1, 0.05); });
   w.addSmoke(vol.x, cy + 14, vol.z, 0xd8d0c8);
+  }
   sprinkle(w, [0xff6fae, 0xffffff, 0xffd21f, 0xff8a3c], 1100, 0.62);
   balloons(w, 3, [[0xff4b4b, 0xfff1a0], [0x2fd0d0, 0xffffff], [0xffcf33, 0xff7ac0]]);
 }
@@ -654,6 +656,58 @@ function snow(w) {
   if (pool) pool.renderOrder = 0.6;
 }
 
+// Averages the normals of vertices that share a position (boxes, extrusions): soft edges.
+export function smoothNormals(geo) {
+  const P = geo.attributes.position;
+  geo.computeVertexNormals();
+  const N = geo.attributes.normal, sum = new Map(), key = (i) => `${Math.round(P.getX(i) * 400)},${Math.round(P.getY(i) * 400)},${Math.round(P.getZ(i) * 400)}`;
+  for (let i = 0; i < P.count; i++) {
+    const k = key(i); let s = sum.get(k);
+    if (!s) { s = [0, 0, 0]; sum.set(k, s); }
+    s[0] += N.getX(i); s[1] += N.getY(i); s[2] += N.getZ(i);
+  }
+  for (let i = 0; i < P.count; i++) {
+    const s = sum.get(key(i)), l = Math.hypot(s[0], s[1], s[2]) || 1;
+    N.setXYZ(i, s[0] / l, s[1] / l, s[2] / l);
+  }
+  return geo;
+}
+
+// Like mergeColored, but keeps the smooth (indexed) normals: soft clay and painted looks.
+// parts: [{ geo, color, matrix?, bottom? }]; `bottom` is a second colour that fades into `color`
+// over the height of the part (cheap baked shading). Parts are consumed.
+export function mergeSmooth(parts) {
+  const pos = [], nor = [], col = [], idx = [];
+  const tc = new THREE.Color(), bc = new THREE.Color(), cc = new THREE.Color();
+  for (const p of parts) {
+    const g = p.geo;
+    if (p.smooth) smoothNormals(g);
+    if (p.matrix) g.applyMatrix4(p.matrix);
+    const P = g.attributes.position, N = g.attributes.normal, n = P.count, base = pos.length / 3;
+    tc.set(p.color);
+    let y0 = Infinity, y1 = -Infinity;
+    if (p.bottom !== undefined) {
+      bc.set(p.bottom);
+      for (let i = 0; i < n; i++) { const y = P.getY(i); if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    for (let i = 0; i < n; i++) {
+      pos.push(P.getX(i), P.getY(i), P.getZ(i));
+      nor.push(N.getX(i), N.getY(i), N.getZ(i));
+      if (p.bottom !== undefined) UTIL.mix3(cc, bc, tc, (P.getY(i) - y0) / (y1 - y0 || 1)); else cc.copy(tc);
+      col.push(cc.r, cc.g, cc.b);
+    }
+    if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
+    else for (let i = 0; i < n; i++) idx.push(base + i);
+    g.dispose();
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  out.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  out.setIndex(new THREE.Uint32BufferAttribute(idx, 1));
+  return out;
+}
+
 // Everything a world pack needs, handed to its theme() and scenery() functions so packs
 // never import game modules themselves: THREE, all of util.js (noise, colours, mergeColored,
 // mat4, canvas helpers...), the placement helpers and the model builders above.
@@ -663,6 +717,7 @@ export const KIT = Object.assign({}, UTIL, {
   geoRoundTree, geoPine, geoPalm, geoCactus, geoRock, geoBush, geoHouse, geoHoodoo, geoSnowman, geoIgloo,
   geoCabin, geoBalloon, geoSailboat, geoLighthouse, geoArch,
 });
+KIT.mergeSmooth = mergeSmooth; KIT.smoothNormals = smoothNormals;
 
 const BUILTIN = { meadow, canyon, island, snow };
 
@@ -673,7 +728,7 @@ export function buildScenery(w) {
     sceneryNoFog: new THREE.MeshLambertMaterial({ vertexColors: true, fog: false }),
     sceneryDouble: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
   };
-  gantry(w);
+  if (!w.def.arena) gantry(w);
   buildTrackProps(w);
   const pack = packById(w.theme.id);
   if (pack) pack.scenery(w, KIT);
