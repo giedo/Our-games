@@ -14,22 +14,22 @@
 //
 // import story from './story.js';
 //
-// import wonky from './wonky.js';
+import wonky from './wonky.js';
 //
 // import plum from './plum.js';
 //
-// import neon from './neon.js';
+import neon from './neon.js';
 
 export const WORLD_PACKS = [
   // candy,
   //
   // story,
   //
-  // wonky,
+  wonky,
   //
   // plum,
   //
-  // neon,
+  neon,
 ];
 
 export function packById(id) {
