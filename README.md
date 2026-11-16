@@ -1,4 +1,4 @@
-# my-games
+# Our-games
 
 Home-made games. Each game lives in its own folder and runs in the browser, with no installation.
 
