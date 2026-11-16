@@ -21,6 +21,14 @@ const BUILTIN_TRACKS = [
     ],
     itemRows: [0.13, 0.4, 0.63, 0.86],
     boostPads: [[0.27, 0], [0.52, -3], [0.76, 3]],
+    obstacles: [
+      { kind: 'ramp', at: 0.2, lat: 0, size: 6 },
+      { kind: 'popper', at: 0.34, lat: 0, period: 3, skin: 'mole' },
+      { kind: 'crosser', at: 0.44, count: 5, speed: 2.5, skin: 'sheep' },
+      { kind: 'roller', at: 0.575, count: 2, size: 1.6, period: 4, skin: 'hay' },
+      { kind: 'bouncer', at: 0.735, lat: -3, size: 2.2, skin: 'mushroom' },
+      { kind: 'cones', at: 0.93, lat: 3, count: 6, skin: 'cone' },
+    ],
   },
   {
     id: 'canyon',
@@ -35,6 +43,14 @@ const BUILTIN_TRACKS = [
     ],
     itemRows: [0.1, 0.33, 0.57, 0.8],
     boostPads: [[0.2, 0], [0.47, 2], [0.7, -2], [0.93, 0]],
+    obstacles: [
+      { kind: 'ramp', at: 0.14, lat: 0, size: 6, skin: 'rock' },
+      { kind: 'roller', at: 0.3, count: 2, size: 1.5, period: 4, skin: 'tumbleweed' },
+      { kind: 'cones', at: 0.43, lat: -3, count: 6, skin: 'cone' },
+      { kind: 'traffic', at: 0.635, count: 2, speed: 8, lat: 3, skin: 'cart' },
+      { kind: 'bouncer', at: 0.755, lat: 3, size: 2.2, skin: 'pad' },
+      { kind: 'spinner', at: 0.97, lat: -6, size: 6, period: 5 },
+    ],
   },
   {
     id: 'island',
@@ -49,6 +65,14 @@ const BUILTIN_TRACKS = [
     ],
     itemRows: [0.12, 0.36, 0.6, 0.84],
     boostPads: [[0.24, 0], [0.5, 0], [0.74, -3]],
+    obstacles: [
+      { kind: 'crosser', at: 0.19, count: 4, speed: 2.5, skin: 'crab' },
+      { kind: 'roller', at: 0.3, count: 2, size: 1.6, period: 4, skin: 'beach' },
+      { kind: 'cones', at: 0.42, lat: 2, count: 7, skin: 'coconut' },
+      { kind: 'popper', at: 0.555, lat: 0, period: 3, skin: 'geyser' },
+      { kind: 'ramp', at: 0.645, lat: 0, size: 6 },
+      { kind: 'bouncer', at: 0.915, lat: -3, size: 2.2, skin: 'pad' },
+    ],
   },
   {
     id: 'snow',
@@ -63,6 +87,14 @@ const BUILTIN_TRACKS = [
     ],
     itemRows: [0.09, 0.3, 0.52, 0.72, 0.9],
     boostPads: [[0.18, 0], [0.42, 2], [0.63, -2], [0.83, 0]],
+    obstacles: [
+      { kind: 'crosser', at: 0.135, count: 4, speed: 2.3, skin: 'penguin' },
+      { kind: 'roller', at: 0.235, count: 2, size: 1.7, period: 4.5, skin: 'snowball' },
+      { kind: 'bouncer', at: 0.335, lat: 3, size: 2.2, skin: 'pad' },
+      { kind: 'ramp', at: 0.565, lat: 0, size: 6, skin: 'snowramp' },
+      { kind: 'slick', at: 0.775, lat: 0, size: 4.2, skin: 'ice' },
+      { kind: 'cones', at: 0.955, lat: -3, count: 5, skin: 'cone' },
+    ],
   },
 ];
 

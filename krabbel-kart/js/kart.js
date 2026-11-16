@@ -54,6 +54,7 @@ export class Kart {
     this._own = null; // per-kart copies of the materials while a ghost or star look is shown
     this.finished = false; this.finishTime = 0; this.place = 1;
     this.pushX = 0; this.pushZ = 0;
+    this.lift = 0; this.liftPitch = 0; this.driftHeld = false; // lift: ramp surface height under the kart (set by js/obstacles.js)
     this.pitch = 0; this.roll = 0; this.yawVis = 0; this.leanVis = 0; this.squash = 0; this.stretch = 0;
     this.offroad = false; this.wrongWayT = 0; this.steerNow = 0;
     this.aiStuckT = 0; this.aiRevT = 0; this.aiPosT = 0; this.aiPx = 0; this.aiPz = 0; this.aiLane = 0; this.aiLaneTarget = 0; this.aiLaneT = 0; this.aiItemT = 0; this.aiHold = 0;
@@ -214,7 +215,10 @@ export class Kart {
         this.aiLaneT = 1.5;
       }
     }
-    this.aiLane = damp(this.aiLane, this.aiLaneTarget, 1.4, dt);
+    // Steer around road obstacles and aim for ramps and bouncers (js/obstacles.js).
+    const adv = this.race.obstacles.advise(this);
+    if (adv === adv) { this.aiLaneTarget = adv; this.aiLaneT = 0.5; }
+    this.aiLane = damp(this.aiLane, this.aiLaneTarget, adv === adv ? 3.2 : 1.4, dt);
     const ahead = tr.wrap(this.idx + Math.round(14 / tr.seg));
     const k = tr.curv[ahead];
     const inside = clamp(Math.abs(k) * 22, 0, 0.75);
@@ -300,6 +304,7 @@ export class Kart {
     if (this.shieldT > 0) this.shieldT -= dt;
     if (this.padCool > 0) this.padCool -= dt;
     if (this.hitCool > 0) this.hitCool -= dt;
+    this.driftHeld = !!ctl.drift;
     let steer = ctl.steer, gas = ctl.gas, brake = ctl.brake, wantDrift = ctl.drift;
     const spinning = this.spinT > 0, frozen = this.fx.frozen > 0;
     if (spinning) this.spinT -= dt;
@@ -395,7 +400,7 @@ export class Kart {
     }
 
     // Height: follow the ground, but fly over crests when going fast.
-    const g = w.groundAt(this.x, this.z, _loc);
+    const g = w.groundAt(this.x, this.z, _loc) + this.lift;
     this.vy -= GRAVITY * dt;
     this.y += this.vy * dt;
     if (this.y <= g) {
@@ -418,6 +423,7 @@ export class Kart {
     const hl = this.groundY(this.x - rxv * 0.8, this.z - rzv * 0.8), hr = this.groundY(this.x + rxv * 0.8, this.z + rzv * 0.8);
     let pitchT = Math.atan2(hf - hb, 2.4);
     const rollT = Math.atan2(hl - hr, 1.6);
+    pitchT += this.liftPitch;
     if (!this.grounded) pitchT = clamp(this.vy * 0.02, -0.35, 0.3);
     this.pitch = damp(this.pitch, pitchT, 10, dt);
     this.roll = damp(this.roll, rollT, 10, dt);
