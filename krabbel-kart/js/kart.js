@@ -56,7 +56,7 @@ export class Kart {
     this.pushX = 0; this.pushZ = 0;
     this.pitch = 0; this.roll = 0; this.yawVis = 0; this.leanVis = 0; this.squash = 0; this.stretch = 0;
     this.offroad = false; this.wrongWayT = 0; this.steerNow = 0;
-    this.aiStuckT = 0; this.aiRevT = 0; this.aiLane = 0; this.aiLaneTarget = 0; this.aiLaneT = 0; this.aiItemT = 0; this.aiHold = 0;
+    this.aiStuckT = 0; this.aiRevT = 0; this.aiPosT = 0; this.aiPx = 0; this.aiPz = 0; this.aiLane = 0; this.aiLaneTarget = 0; this.aiLaneT = 0; this.aiItemT = 0; this.aiHold = 0;
     this.ctl = { steer: 0, gas: 0, brake: 0, drift: false, item: false };
     this.emitAcc = 0;
     // The driver subtly turns towards whoever is looking, so the drawing stays readable.
@@ -268,10 +268,15 @@ export class Kart {
       this.aiRevT -= dt; c.gas = 0; c.brake = 1; c.steer = clamp(err * 3, -1, 1); c.drift = false; c.item = false;
       return c;
     }
-    if (this.race.state === 'racing' && Math.abs(this.speed) < 2.5 && this.spinT <= 0 && !this.fx.frozen && !this.fx.flat) {
-      this.aiStuckT += dt;
-      if (this.aiStuckT > 0.9) { this.aiRevT = 0.8; this.aiStuckT = 0; }
-    } else this.aiStuckT = 0;
+    // Not getting anywhere (pressed against the fence or a rival) for a while: reverse out.
+    this.aiPosT += dt;
+    if (this.aiPosT > 0.5) {
+      const moved = Math.hypot(this.x - this.aiPx, this.z - this.aiPz);
+      this.aiPosT = 0; this.aiPx = this.x; this.aiPz = this.z;
+      if (this.race.state === 'racing' && moved < 1.3 && this.spinT <= 0 && !this.fx.frozen && !this.fx.flat) {
+        if (++this.aiStuckT >= 2) { this.aiRevT = 0.8; this.aiStuckT = 0; }
+      } else this.aiStuckT = 0;
+    }
     c.steer = clamp(-err * 3, -1, 1);
     // Slow down for bends, looking the way the kart is actually heading.
     const way = Math.abs(angleDiff(this.dir, tr.heading[this.idx])) < Math.PI / 2 ? 1 : -1;

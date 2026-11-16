@@ -72,17 +72,18 @@ export async function listRegistry(page) {
 }
 
 // Starts a mode through the menu code path: the same settings and ui.startRace() a player's taps end in.
-export async function startMode(page, { world, mode, age = 'little', players = 1, scale = 8 }) {
-  await page.evaluate(({ world, mode, age, players, scale }) => {
+export async function startMode(page, { world, mode, age = 'little', players = 1, scale = 8, time = 0 }) {
+  await page.evaluate(({ world, mode, age, players, scale, time }) => {
     const g = window.__kk, s = g.settings;
     s.age = age; s.mode = mode; s.track = world;
+    if (time) { s.modeOpts = s.modeOpts || {}; s.modeOpts[mode] = Object.assign({}, s.modeOpts[mode], { time }); } // battle modes: minutes
     const pick = (kind) => g.book.builtin.filter((x) => x.kind === kind);
     const d = pick('driver'), v = pick('vehicle');
     s.picks = [{ driver: d[0].id, vehicle: v[0].id }, { driver: d[1].id, vehicle: v[1].id }];
     g.timeScale = scale; g.noRender = true; g.paused = false;
     g.ui.players = players;
     g.ui.startRace();
-  }, { world, mode, age, players, scale });
+  }, { world, mode, age, players, scale, time });
   await page.waitForFunction(() => window.__kk.race && document.getElementById('loading').classList.contains('hide'), null, { timeout: 60000 });
 }
 

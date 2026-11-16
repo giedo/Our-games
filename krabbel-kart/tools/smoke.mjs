@@ -2,7 +2,7 @@
 // end under autopilot and fails on any console error, page error, timeout or missing result.
 //
 //   node tools/smoke.mjs [--world meadow,snow] [--mode race,cup] [--age little|big] [--players 1|2]
-//                        [--shots <dir>] [--quick] [--arena] [--timeout <seconds>] [--scale <timeScale>] [--game <dir>]
+//                        [--time <minutes, battle modes>] [--shots <dir>] [--quick] [--arena] [--timeout <seconds>] [--scale <timeScale>] [--game <dir>]
 //
 // --quick: one world, mode race only. --arena: only the arena-variant build check of each world (it also runs at the end of a full run). --shots saves PNGs (menu fly-by of each world, mid-race chase
 // view of each run) and renders at 1024x640. Exit code 1 when anything failed.
@@ -55,7 +55,7 @@ async function runOne({ world, mode }) {
       await frames(page, 4); await sleep(300); await frames(page, 2);
       await shoot(`${first}-menu.png`);
     }
-    await startMode(page, { world: first, mode: mode.id, age, players, scale });
+    await startMode(page, { world: first, mode: mode.id, age, players, scale, time: Number(args.time) || 0 });
     const sims = new Map();
     let sampled = false, races = 0, results = 0;
     for (;;) {
