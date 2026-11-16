@@ -16,7 +16,7 @@ import stars from './stars.js';
 //
 import flag from './flag.js';
 //
-// import roam from './roam.js';
+import roam from './roam.js';
 
 export const MODES = [
   race,
@@ -31,7 +31,7 @@ export const MODES = [
   //
   flag,
   //
-  // roam,
+  roam,
 ];
 
 export function modeById(id) {
