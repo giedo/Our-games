@@ -53,7 +53,7 @@ function blob(cols, seed, rough = 0.12) {
     for (let i = 0; i < N; i++) {
       const a0 = (i / N) * TAU, a1 = ((i + 1) / N) * TAU, k0 = rr[i], k1 = rr[(i + 1) % N];
       const P = (a, r, k) => [Math.cos(a) * r * k, 0.02 + ci * 0.012, Math.sin(a) * r * k];
-      ps.push({ geo: quad(P(a0, r0, k0), P(a0, r1, k0), P(a1, r1, k1), P(a1, r0, k1)).clone(), color: cols[(ci + (i % 3 === 0 ? 1 : 0)) % cols.length] });
+      ps.push({ geo: quad(P(a0, r0, k0), P(a1, r0, k1), P(a1, r1, k1), P(a0, r1, k0)).clone(), color: cols[(ci + (i % 3 === 0 ? 1 : 0)) % cols.length] });
     }
   });
   return ps;

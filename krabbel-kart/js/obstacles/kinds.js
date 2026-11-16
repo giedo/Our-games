@@ -25,7 +25,7 @@ function flyStep(b, dt) {
   }
   return b.t > 3;
 }
-const newBody = () => ({ x: 0, y: 0, z: 0, fly: false, t: 0, bn: 0, l: 0, dd: 0, h: 0, vl: 0, vd: 0, vh: 0, spin: 0, ang: 0, sq: 0, cool: 0 });
+const newBody = () => ({ pop: 1, x: 0, y: 0, z: 0, fly: false, t: 0, bn: 0, l: 0, dd: 0, h: 0, vl: 0, vd: 0, vh: 0, spin: 0, ang: 0, sq: 0, cool: 0 });
 const strong = (k) => k.fx.star > 0 || k.fx.giant > 0;
 
 class Obs {
@@ -140,7 +140,7 @@ class Crosser extends Obs {
     super(sys, def);
     this.n = clamp(def.count | 0 || 4, 3, 6);
     this.sp = def.speed || 2.5;
-    this.sc = 1.25 * (def.size || 1);
+    this.sc = 1.5 * (def.size || 1);
     this.edge = sys.tr.halfWidth + 1.3;
     this.half = (this.n * 2.2) / 2 + 2;
     this.sw = this.swarm('crosser', def.skin, this.n);
@@ -277,7 +277,7 @@ class Cones extends Obs {
     super(sys, def);
     this.n = clamp(def.count | 0 || 6, 1, 14);
     this.sw = this.swarm('cones', def.skin, this.n);
-    this.sc = 1.25;
+    this.sc = 1.5;
     this.c = [];
     for (let i = 0; i < this.n; i++) {
       const ring = i === 0 ? 0 : i < 7 ? 1 : 2, a = ring ? ((i - (ring === 1 ? 1 : 7)) / (ring === 1 ? 6 : 7)) * TAU + ring : 0, R = ring * 1.55;
@@ -454,7 +454,7 @@ class Popper extends Obs {
     }
     if (!this.vis) return;
     const P = sys.at(this.s0, this.lat, 0), pulse = ph.tel > 0 && ph.tel < 1 ? 1 + 0.06 * Math.sin(time * 30) : 1;
-    this.hole.set(0, P.x, P.y, P.z, P.yaw, -P.slope, 0, 1.6 * pulse);
+    this.hole.set(0, P.x, P.y, P.z, P.yaw, -P.slope, 0, 2.1 * pulse);
     if (ph.y < -2.1) this.thing.hide(0);
     else {
       const stretch = ph.hot && ph.y > 0 ? 1 + 0.12 * Math.sin(ph.y * 2) : 1;
