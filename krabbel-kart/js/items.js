@@ -11,6 +11,8 @@ const PUDDLE_COLORS = [0xff3fa4, 0x3fd0ff, 0xffd21f, 0x7be04a, 0xb46bff];
 // ---------- registry ----------
 
 export const ITEM_DEFS = [];
+// Feature files (js/stars.js) that need to start with every race: fn(sys) runs at the end of the ItemSystem constructor.
+export const SYSTEM_HOOKS = [];
 
 // def: {
 //   id, icon (inline svg string), ages: ['little', 'big'] (default both),
@@ -69,6 +71,7 @@ export class ItemSystem {
     this.boxMesh.renderOrder = 2;
     scene.add(this.boxMesh);
     this.dummy = new THREE.Object3D();
+    for (const h of SYSTEM_HOOKS) h(this);
   }
 
   // ----- choosing items -----
