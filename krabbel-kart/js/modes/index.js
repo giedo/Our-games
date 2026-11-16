@@ -12,7 +12,7 @@ import cup from './cup.js';
 //
 import balloon from './balloon.js';
 //
-// import stars from './stars.js';
+import stars from './stars.js';
 //
 import flag from './flag.js';
 //
@@ -27,7 +27,7 @@ export const MODES = [
   //
   balloon,
   //
-  // stars,
+  stars,
   //
   flag,
   //
