@@ -8,7 +8,7 @@ import cup from './cup.js';
 
 import knockout from './knockout.js';
 //
-// import time from './time.js';
+import time from './time.js';
 //
 import balloon from './balloon.js';
 //
@@ -23,7 +23,7 @@ export const MODES = [
   cup,
   knockout,
   //
-  // time,
+  time,
   //
   balloon,
   //
