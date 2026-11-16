@@ -654,6 +654,23 @@ function snow(w) {
   if (pool) pool.renderOrder = 0.6;
 }
 
+// Averages the normals of vertices that share a position (boxes, extrusions): soft edges.
+export function smoothNormals(geo) {
+  const P = geo.attributes.position;
+  geo.computeVertexNormals();
+  const N = geo.attributes.normal, sum = new Map(), key = (i) => `${Math.round(P.getX(i) * 400)},${Math.round(P.getY(i) * 400)},${Math.round(P.getZ(i) * 400)}`;
+  for (let i = 0; i < P.count; i++) {
+    const k = key(i); let s = sum.get(k);
+    if (!s) { s = [0, 0, 0]; sum.set(k, s); }
+    s[0] += N.getX(i); s[1] += N.getY(i); s[2] += N.getZ(i);
+  }
+  for (let i = 0; i < P.count; i++) {
+    const s = sum.get(key(i)), l = Math.hypot(s[0], s[1], s[2]) || 1;
+    N.setXYZ(i, s[0] / l, s[1] / l, s[2] / l);
+  }
+  return geo;
+}
+
 // Like mergeColored, but keeps the smooth (indexed) normals: soft clay and painted looks.
 // parts: [{ geo, color, matrix?, bottom? }]; `bottom` is a second colour that fades into `color`
 // over the height of the part (cheap baked shading). Parts are consumed.
@@ -662,6 +679,7 @@ export function mergeSmooth(parts) {
   const tc = new THREE.Color(), bc = new THREE.Color(), cc = new THREE.Color();
   for (const p of parts) {
     const g = p.geo;
+    if (p.smooth) smoothNormals(g);
     if (p.matrix) g.applyMatrix4(p.matrix);
     const P = g.attributes.position, N = g.attributes.normal, n = P.count, base = pos.length / 3;
     tc.set(p.color);
@@ -697,7 +715,7 @@ export const KIT = Object.assign({}, UTIL, {
   geoRoundTree, geoPine, geoPalm, geoCactus, geoRock, geoBush, geoHouse, geoHoodoo, geoSnowman, geoIgloo,
   geoCabin, geoBalloon, geoSailboat, geoLighthouse, geoArch,
 });
-KIT.mergeSmooth = mergeSmooth;
+KIT.mergeSmooth = mergeSmooth; KIT.smoothNormals = smoothNormals;
 
 const BUILTIN = { meadow, canyon, island, snow };
 

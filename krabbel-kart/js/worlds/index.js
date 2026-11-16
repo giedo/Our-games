@@ -10,7 +10,7 @@
 // level. Everything else (scenery helpers, noise, geometry builders) arrives through
 // the `kit` argument that the theme() and scenery() functions receive.
 
-// import candy from './candy.js';
+import candy from './candy.js';
 //
 // import story from './story.js';
 //
@@ -21,7 +21,7 @@
 // import neon from './neon.js';
 
 export const WORLD_PACKS = [
-  // candy,
+  candy,
   //
   // story,
   //
