@@ -23,8 +23,15 @@ const game = await openGame({ width: shotsDir ? 1024 : 640, height: shotsDir ? 6
 const { page, errors } = game;
 const reg = await listRegistry(page);
 
+// Class fields the registry list does not carry: modes for one player only, and results that list only the players.
+const extra = await page.evaluate(async () => {
+  const { MODES } = await import(`${location.pathname.replace(/index\.html$/, '')}js/modes/index.js`);
+  return Object.fromEntries(MODES.map((M) => [M.id, { maxPlayers: M.maxPlayers || 2, humanRows: !!M.humanRows }]));
+});
+for (const m of reg.modes) Object.assign(m, extra[m.id]);
+
 let worlds = list(args.world) || reg.worlds;
-let modes = reg.modes.filter((m) => m.ages.includes(age));
+let modes = reg.modes.filter((m) => m.ages.includes(age) && m.maxPlayers >= players);
 if (list(args.mode)) modes = modes.filter((m) => list(args.mode).includes(m.id));
 if (args.quick) { worlds = worlds.slice(0, 1); modes = reg.modes.filter((m) => m.id === 'race'); }
 for (const w of worlds) if (!reg.worlds.includes(w)) { console.error(`unknown world ${w} (have ${reg.worlds.join(', ')})`); process.exit(2); }
@@ -75,7 +82,7 @@ async function runOne({ world, mode }) {
       }
       if (st.ui === 'results') {
         results++;
-        const want = mode.karts;
+        const want = mode.humanRows ? players : mode.karts;
         if (st.rows !== want) throw new Error(`results show ${st.rows} rows, expected ${want}`);
         if (shotsDir) { await page.evaluate(() => { window.__kk.noRender = false; }); await frames(page, 2); await shoot(`${first}-${mode.id}-results.png`); await page.evaluate(() => { window.__kk.noRender = true; }); }
         if (!mode.series) break;

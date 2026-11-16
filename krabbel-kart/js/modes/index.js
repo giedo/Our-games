@@ -6,9 +6,9 @@
 import race from './race.js';
 import cup from './cup.js';
 
-// import knockout from './knockout.js';
+import knockout from './knockout.js';
 //
-// import time from './time.js';
+import time from './time.js';
 //
 import balloon from './balloon.js';
 //
@@ -16,14 +16,14 @@ import stars from './stars.js';
 //
 import flag from './flag.js';
 //
-// import roam from './roam.js';
+import roam from './roam.js';
 
 export const MODES = [
   race,
   cup,
-  // knockout,
+  knockout,
   //
-  // time,
+  time,
   //
   balloon,
   //
@@ -31,7 +31,7 @@ export const MODES = [
   //
   flag,
   //
-  // roam,
+  roam,
 ];
 
 export function modeById(id) {
