@@ -305,6 +305,12 @@ class Game {
 
   startCeremony() {
     const ranking = this.cupStandings();
+    // Remember the best result of a human player in this cup (1 = gold, 2 = silver, 3 = bronze).
+    const best = ranking.findIndex((e) => e.human) + 1;
+    if (this.cup && best >= 1 && best <= 3) {
+      const cb = this.settings.cupBest = this.settings.cupBest || {};
+      if (!cb[this.cup.id] || best < cb[this.cup.id]) { cb[this.cup.id] = best; saveSettings(this.settings); }
+    }
     this.endRace(true);
     this.ceremony = new Ceremony(this, this.world, ranking);
     this.audio.startMusic('podium');
@@ -318,6 +324,13 @@ class Game {
     this.ceremony = null;
     this.camReady = false;
     if (!keepMusic) this.audio.startMusic('menu');
+  }
+
+  // The pause menu's "End": show the results of the race as it stands.
+  endRaceNow() {
+    if (!this.race) return;
+    this.setPaused(false);
+    this.race.mode.endNow();
   }
 
   quitToMenu() {

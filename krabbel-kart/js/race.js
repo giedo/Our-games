@@ -22,6 +22,7 @@ class ChaseCam {
 
   update(dt, race) {
     const k = this.kart, cam = this.cam, p = cam.position;
+    const T = k.out ? race.mode.spectate(k) || k : k; // an out kart watches the kart its mode names
     if (race.state === 'intro') {
       const u = clamp(race.stateT / INTRO, 0, 1), e = 1 - Math.pow(1 - u, 3);
       const ang = k.dir + Math.PI + (1 - e) * 2.7;
@@ -31,10 +32,10 @@ class ChaseCam {
       this.dir = k.dir; this.y = k.y + 3.3;
     } else if (k.finished || k.out) {
       this.orbit += dt * 0.55;
-      const ang = k.dir + Math.PI + Math.min(this.orbit, 2.4) + Math.max(0, this.orbit - 2.4) * 0.25;
-      const tx = k.x + Math.sin(ang) * 7.2, tz = k.z + Math.cos(ang) * 7.2;
-      p.x = damp(p.x, tx, 5, dt); p.z = damp(p.z, tz, 5, dt); p.y = damp(p.y, k.y + 2.7, 5, dt);
-      this.look.set(k.x, k.y + 1.5, k.z);
+      const ang = T.dir + Math.PI + Math.min(this.orbit, 2.4) + Math.max(0, this.orbit - 2.4) * 0.25;
+      const tx = T.x + Math.sin(ang) * 7.2, tz = T.z + Math.cos(ang) * 7.2;
+      p.x = damp(p.x, tx, 5, dt); p.z = damp(p.z, tz, 5, dt); p.y = damp(p.y, T.y + 2.7, 5, dt);
+      this.look.set(T.x, T.y + 1.5, T.z);
       this.fov = damp(this.fov, 55, 3, dt);
     } else {
       this.dir += angleDiff(this.dir, k.dir - k.driftDir * 0.22) * (1 - Math.exp(-6.5 * dt));
@@ -154,12 +155,12 @@ export class Race {
       if (this.stateT >= INTRO) { this.state = 'countdown'; this.stateT = 0; this.count = 4; }
     } else if (this.state === 'countdown') {
       const c = 3 - Math.floor(this.stateT);
-      if (c !== this.count && c > 0) {
+      if (c !== this.count && c > 0 && !this.mode.skipCountdown) {
         this.count = c;
         for (const h of this.huds) h.message(String(c), 0.9, 'count');
         game.audio.play('beep', 1);
       }
-      if (this.stateT >= 3) {
+      if (this.stateT >= (this.mode.skipCountdown ? 0.3 : 3)) {
         this.state = 'racing'; this.stateT = 0;
         for (const h of this.huds) h.message(t('go'), 1.0, 'go');
         game.audio.play('go', 1);

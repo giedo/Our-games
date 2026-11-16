@@ -16,7 +16,7 @@ function el(tag, cls, html) {
 export class Hud {
   constructor(game, race, kart, index, total) {
     this.game = game; this.race = race; this.kart = kart; this.index = index;
-    const root = this.el = el('div', `hud p${index}${total > 1 ? ' split' : ''}`);
+    const root = this.el = el('div', `hud p${index}${total > 1 ? ' split' : ''} m-${race.mode.constructor.id}`);
     this.pos = el('div', 'hud-pos');
     this.lap = el('div', 'hud-lap');
     this.time = el('div', 'hud-time', '0:00.00');
@@ -30,12 +30,15 @@ export class Hud {
     this.msg = el('div', 'hud-msg');
     this.wrong = el('div', 'hud-wrong', t('wrongWay'));
     this.vig = el('div', 'hud-vig');
+    this.banner = el('div', 'hud-banner');
+    this.act = el('button', 'hud-act');
+    this.act.addEventListener('pointerdown', (e) => { e.stopPropagation(); const a = race.mode.hudAction(kart); if (a) { game.audio.play('click'); a.fn(); } });
     this.skip = el('div', 'hud-skip', t('tapToSkip'));
     const col = el('div', 'hud-col');
     col.append(this.lap, this.time, this.extra);
     const tl = el('div', 'hud-tl');
     tl.append(this.pos, col);
-    root.append(this.vig, tl, this.map, this.msg, this.wrong, this.item, this.skip);
+    root.append(this.vig, tl, this.banner, this.act, this.map, this.msg, this.wrong, this.item, this.skip);
     this._buildTouch(root);
     game.hudRoot.appendChild(root);
     this._cache = {};
@@ -164,10 +167,20 @@ export class Hud {
     this._set('badge', k.item && k.rollT <= 0 ? left : 0, (v) => {
       if (v) { this.badge.textContent = String(v); this.item.append(this.badge); } else this.badge.remove();
     });
-    this._set('wrong', k.wrongWayT > 1.2 && !k.finished, (v) => this.wrong.classList.toggle('show', v));
+    // Mode banner line and action button.
+    const ban = race.mode.hudBanner(k);
+    this._set('banner', ban ? `${ban.cls || ''}|${ban.text}|${ban.sub || ''}` : '', () => {
+      this.banner.textContent = '';
+      this.banner.className = ban ? `hud-banner show ${ban.cls || ''}` : 'hud-banner';
+      this.el.dataset.ban = ban && ban.cls ? ban.cls : '';
+      if (ban) { this.banner.append(el('b', '', '')); this.banner.firstChild.textContent = ban.text; if (ban.sub) { const sm = el('small', ''); sm.textContent = ban.sub; this.banner.append(sm); } }
+    });
+    const act = race.mode.hudAction(k);
+    this._set('act', act ? act.label : '', (v) => { this.act.textContent = v; this.act.classList.toggle('show', !!v); });
+    this._set('wrong', k.wrongWayT > 1.2 && !k.finished && race.mode.showWrongWay, (v) => this.wrong.classList.toggle('show', v));
     this._set('boost', k.boostT > 0, (v) => this.vig.classList.toggle('show', v));
     this._set('intro', race.state === 'intro', (v) => this.skip.classList.toggle('show', v));
-    this._set('fin', k.finished, (v) => this.el.classList.toggle('finished', v));
+    this._set('fin', k.finished || k.out, (v) => this.el.classList.toggle('finished', v));
     // Minimap.
     const g = this.map.getContext('2d');
     g.clearRect(0, 0, 280, 280);
