@@ -10,7 +10,18 @@ addStrings({
 export class RaceMode extends Mode {
   // Options shown on the track screen: { key, label, values: [[value, label]...], default }.
   static options(settings) {
-    return [{ key: 'laps', label: t('laps'), values: [[2, '2'], [3, '3'], [5, '5']], default: 3 }];
+    return [
+      { key: 'laps', label: t('laps'), values: [[2, '2'], [3, '3'], [5, '5']], default: 3 },
+      { key: 'items', label: t('items'), values: [['all', t('itemsAll')], ['turbo', t('itemsTurbo')], ['none', t('itemsNone')]], default: 'all' },
+    ];
+  }
+
+  // Items option: all, only the turbo crayon, or no item boxes at all.
+  itemPool(kart) { return this.opts.items === 'turbo' ? ['turbo'] : null; }
+
+  update(dt) {
+    super.update(dt);
+    if (this.opts.items === 'none' && this.race.items.boxesEnabled) this.race.items.boxesEnabled = false;
   }
 }
 
