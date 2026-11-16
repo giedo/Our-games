@@ -5,11 +5,11 @@ import { RAINBOW, puff } from './common.js';
 
 addStrings({ en: { items: { turbo3: 'Crayon Pack' } }, nl: { items: { turbo3: 'Krijtjesdoos' } } });
 
-const crayon = (rot, body, tip) => `<g transform="rotate(${rot} 32 58)"><path d="M24 22h16v32a2 2 0 0 1-2 2H26a2 2 0 0 1-2-2z" fill="${body}"/><path d="M24 22l8-14 8 14z" fill="${tip}"/><path d="M24 30h16v8H24z" fill="#fffaf0"/></g>`;
+const crayon = (rot, body, tip) => `<g transform="rotate(${rot} 32 58)"><path d="M26 22h12v32a2 2 0 0 1-2 2H28a2 2 0 0 1-2-2z" fill="${body}"/><path d="M26 22l6-15 6 15z" fill="${tip}"/><path d="M26 30h12v8H26z" fill="#fffaf0"/></g>`;
 
 registerItem({
   id: 'turbo3',
-  icon: `<svg viewBox="0 0 64 64"><g stroke="#2a2433" stroke-width="3" stroke-linejoin="round">${crayon(-28, '#ff4b4b', '#c93636')}${crayon(28, '#4fb8ff', '#2f8fd6')}${crayon(0, '#ffd21f', '#d6a600')}</g></svg>`,
+  icon: `<svg viewBox="0 0 64 64"><g stroke="#2a2433" stroke-width="3" stroke-linejoin="round">${crayon(-36, '#ff4b4b', '#c93636')}${crayon(36, '#4fb8ff', '#2f8fd6')}${crayon(0, '#ffd21f', '#d6a600')}</g></svg>`,
   weight: (k, f) => 1 + 2.5 * f,
   uses: 3,
   use(sys, kart) {

@@ -61,7 +61,7 @@ registerItem({
   id: 'boomerang',
   ages: ['big'],
   uses: 2,
-  icon: '<svg viewBox="0 0 64 64"><g stroke="#2a2433" stroke-width="3" stroke-linejoin="round"><path d="M6 12l8-6 34 30-6 10z" fill="#ffd21f"/><path d="M58 24l-4-10-36 12 4 12z" fill="#ffd21f" transform="translate(-2 24) scale(.95)"/></g><path d="M14 18l3 3M21 24l4 4M28 31l3 3M35 38l3 3M44 20l-3 8M36 22l-2 5M28 24l-2 5" stroke="#2a2433" stroke-width="3" stroke-linecap="round"/><path d="M52 54c-8 6-20 4-26-2" fill="none" stroke="#4fb8ff" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 7"/></svg>',
+  icon: '<svg viewBox="0 0 64 64"><g transform="rotate(-12 32 32)"><path d="M8 6h16l2 28h30v16H8z" fill="#ffd21f" stroke="#2a2433" stroke-width="3" stroke-linejoin="round"/><path d="M8 14h6M8 22h9M8 30h6M8 38h9M16 50v-6M26 50v-9M36 50v-6M46 50v-9" stroke="#2a2433" stroke-width="3" stroke-linecap="round"/></g><path d="M40 12c10 2 16 10 14 20" fill="none" stroke="#4fb8ff" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 7"/><path d="M50 30l4 6 4-7z" fill="#4fb8ff" stroke="#2a2433" stroke-width="2" stroke-linejoin="round"/></svg>',
   weight: (k, f) => 0.8 + 0.8 * f,
   use(sys, kart) { sys.add(new Ruler(sys, kart)); },
   aiWants: (k, ctx) => rivalNear(ctx.race.items, k, 35, 0.7) || ctx.hold > 8,

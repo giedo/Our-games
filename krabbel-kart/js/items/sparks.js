@@ -11,7 +11,7 @@ class Spark extends Shot {
   constructor(sys, kart) {
     super(sys, kart, { speed: 78, h: 1.2, life: 1.4, lead: 3 });
     this.mesh = sys.spawnMesh(geoOnce(sys, 'spark', () => [{ geo: paint(starGeo(0.6, 0.25, 0.25, 4), () => 0xffe14a), color: 0xffe14a }]), litMat(sys));
-    this.age = 0;
+    this.age = 0; this.mesh.scale.setScalar(1.8);
     sys.race.sfx('item-zap', kart);
   }
 
