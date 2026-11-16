@@ -16,7 +16,7 @@ import story from './story.js';
 //
 // import wonky from './wonky.js';
 //
-// import plum from './plum.js';
+import plum from './plum.js';
 //
 // import neon from './neon.js';
 
@@ -27,7 +27,7 @@ export const WORLD_PACKS = [
   //
   // wonky,
   //
-  // plum,
+  plum,
   //
   // neon,
 ];
