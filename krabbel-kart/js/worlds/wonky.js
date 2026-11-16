@@ -41,6 +41,10 @@ const VARIANTS = [
   { w: 6, d: 5, floors: 2, fh: 3, wall: [ORG, ORG2], roof: MAG, rh: 3.2, skew: -1.2, lx: 0.12, lz: -0.03, taper: 0.15, twist: 0.05, door: TEAL2, chim: 1 },
   { w: 4.6, d: 4.6, floors: 4, fh: 3, wall: [PUR, PUR2], roof: ORG, rh: 5.5, skew: 0.6, lx: -0.14, lz: 0.05, taper: 0.34, twist: 0.1, aerial: true, door: PINK },
   { w: 6.6, d: 5.4, floors: 3, fh: 3, wall: [CREAM, PINK, MINT], roof: TEAL2, rh: 3, skew: 1.4, zig: 1.6, lx: 0.06, lz: 0, taper: 0.12, twist: -0.06, door: PUR, chim: 2 },
+  { w: 9, d: 5.6, floors: 2, fh: 3.4, wall: [MAG2, ORG], roof: ORG2, rh: 3.4, skew: 1.5, lx: 0.09, lz: 0.02, taper: 0.08, twist: 0.05, shop: true, door: TEAL, chim: 2 },
+  { w: 3.8, d: 4, floors: 5, fh: 2.9, wall: [TEAL, PUR2], roof: MAG, rh: 4.5, skew: -1.0, lx: -0.18, lz: 0.04, taper: 0.3, twist: 0.12, aerial: true, door: ORG },
+  { w: 7, d: 5.8, floors: 2, fh: 3.4, wall: [ORG, PUR], roof: TEAL2, rh: 3.4, skew: 0.9, lx: 0.1, lz: -0.04, taper: 0.18, twist: -0.08, door: PINK, chim: 2 },
+  { w: 5.6, d: 5, floors: 3, fh: 3.1, wall: [MAG, TEAL, MAG], roof: PUR, rh: 4.2, skew: -1.5, lx: -0.1, lz: 0.03, taper: 0.22, twist: 0.09, aerial: true, door: CREAM },
 ];
 
 function geoHouse(rnd, v) {
@@ -62,7 +66,7 @@ function geoHouse(rnd, v) {
         continue;
       }
       const big = v.shop && f === 0;
-      const wd = big ? 1.9 : 0.95, ht = big ? 1.5 : 1.25, yy = y0 + (big ? 1.4 : v.fh * 0.55);
+      const wd = big ? 2.1 : 1.15, ht = big ? 1.6 : 1.5, yy = y0 + (big ? 1.4 : v.fh * 0.55);
       parts.push({ geo: new THREE.BoxGeometry(wd + 0.4, ht + 0.4, 0.2), color: INK, matrix: mat4(x, yy, v.d / 2 + 0.04) });
       wins.push({ x, y: yy, z: v.d / 2 + 0.16, w: wd, h: ht });
     }
@@ -175,7 +179,7 @@ function clockTexture() {
 function chalkAtlas() {
   const c = makeCanvas(512, 512), g = c.getContext('2d');
   g.lineCap = 'round'; g.lineJoin = 'round';
-  const cell = (cx, cy, col, fn) => { g.save(); g.translate(cx * 256, cy * 256); g.strokeStyle = col; g.lineWidth = 9; fn(); g.restore(); };
+  const cell = (cx, cy, col, fn) => { g.save(); g.translate(cx * 256, cy * 256); g.strokeStyle = col; g.lineWidth = 13; fn(); g.restore(); };
   cell(0, 0, '#fff2c8', () => { for (let r = 0; r < 4; r++) { g.strokeRect(96, 24 + r * 52, 64, 52); } g.strokeRect(36, 128, 62, 52); g.strokeRect(158, 128, 62, 52); g.beginPath(); g.arc(128, 232, 14, 0, TAU); g.stroke(); });
   cell(1, 0, '#ff9ad0', () => { g.beginPath(); for (let i = 0; i < 11; i++) { const a = i * 0.58 + 3, r = 10 + i * 10.5; g.lineTo(128 + Math.cos(a) * r, 128 + Math.sin(a) * r); } g.stroke(); g.beginPath(); for (let i = 0; i <= 10; i++) { const a = (i / 10) * TAU * 2 - 1.6, r = i % 2 ? 24 : 58; g.lineTo(128 + Math.cos(a) * r * 0.5, 40 + Math.sin(a) * r * 0.5); } g.stroke(); });
   cell(0, 1, '#8ff3ff', () => { g.beginPath(); g.arc(128, 128, 76, 0, TAU); g.stroke(); g.beginPath(); g.arc(98, 108, 7, 0, TAU); g.arc(158, 108, 7, 0, TAU); g.stroke(); g.beginPath(); g.arc(128, 136, 42, 0.25, Math.PI - 0.25); g.stroke(); });
@@ -324,8 +328,8 @@ export default {
     const g1 = new T.Color(0x2d9a8c), g2 = new T.Color(0x1e6f86), patch = new T.Color(0x8a2f86), pave = new T.Color(0x9b86b8), hill = new T.Color(0x4a2a7a), rock = new T.Color(0x5b3f7a);
     return {
       night: true,
-      sky: { top: 0x174f7c, mid: 0xb83a8e, bottom: 0xd86a86, sunColor: 0xffa860, sunDir: [-0.6, 0.12, -0.5], stars: 0.45, aurora: 0 },
-      fog: { color: 0xc4607f, near: 120, far: 760 },
+      sky: { top: 0x0c3a68, mid: 0x4a4a9c, bottom: 0x8a4a98, sunColor: 0xffa860, sunDir: [-0.6, 0.12, -0.5], stars: 0.6, aurora: 0 },
+      fog: { color: 0x70469a, near: 220, far: 1150 },
       light: { sun: 0xffb48a, sunI: 2.2, sky: 0x9fc0e0, ground: 0x8a4a8a, hemiI: 1.55 },
       water: null,
       road: { tint: 0x8a78b8, line: '#ffe08a', curbA: '#ff3da0', curbB: '#2fd6c8', shoulder: 0x8a78a8 },
@@ -373,36 +377,48 @@ export default {
 
     // Houses along both sides of the street, a back row, a far skyline and canal-side rows.
     const lists = VARIANTS.map(() => []), taken = [];
-    const put = (x, z, ry, s) => {
-      const v = Math.floor(rnd() * VARIANTS.length);
+    const put = (x, z, ry, s, v) => {
+      if (v === undefined) v = Math.floor(rnd() * VARIANTS.length);
       const g = 0.86 + rnd() * 0.28;
       lists[v].push({ x, y: w.heightAt(x, z) - 0.15, z, ry: ry + (rnd() - 0.5) * 0.25, s, sy: s * (0.9 + rnd() * 0.4), color: new THREE.Color(g, 0.9 + rnd() * 0.2, g) });
       taken.push([x, z]);
     };
+    let clk = null; // the town square clock tower (inside the tightest corner): keep houses off it
+    if (!arena) {
+      let ci = 0;
+      for (let i = 0; i < tr.n; i++) if (Math.abs(tr.curv[i]) > Math.abs(tr.curv[ci])) ci = i;
+      tr.posAt(ci, (tr.curv[ci] > 0 ? -1 : 1) * 34, p); clk = [p.x, p.z];
+    }
+    const nearClock = (x, z) => clk && Math.hypot(x - clk[0], z - clk[1]) < 24;
     for (const side of [-1, 1]) {
       let s = rnd() * 6;
       while (s < tr.n - 6) {
-        s += (14 + rnd() * 8) / tr.seg;
-        const lat = side * (tr.halfWidth + tr.curb + 9.5 + rnd() * 4);
+        const v = Math.floor(rnd() * VARIANTS.length), V = VARIANTS[v], sc = 1.8 + rnd() * 0.5;
+        const wd = (V.w * sc + 1.5) / tr.seg, half = (V.d * sc) / 2;
+        s += wd * 0.5 + (1 + rnd() * 4) / tr.seg;
+        const lat = side * (tr.halfWidth + tr.curb + 8 + rnd() * 5 + half);
         tr.posAt(s, lat, p); tr.distInfo(p.x, p.z, info);
-        if (info.d < Math.abs(lat) - 3 || info.d < tr.limit + 6 || nearCanal(p.x, p.z, 16) || !away(p.x, p.z) || s < 12 || s > tr.n - 12) continue;
-        put(p.x, p.z, tr.headingAt(s) + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 0.9 + rnd() * 0.4);
-        if (rnd() < 0.45) { // back row
-          tr.posAt(s + rnd() * 3, lat + side * (13 + rnd() * 6), p);
-          tr.distInfo(p.x, p.z, info);
-          if (info.d > tr.limit + 6 && !nearCanal(p.x, p.z, 16) && away(p.x, p.z)) put(p.x, p.z, tr.headingAt(s) + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 1 + rnd() * 0.5);
+        const ok = !(info.d < Math.abs(lat) - 3 || info.d < tr.limit + 6 || nearCanal(p.x, p.z, 16) || !away(p.x, p.z) || nearClock(p.x, p.z) || s < 12 || s > tr.n - 12);
+        if (ok) {
+          put(p.x, p.z, tr.headingAt(s) + (side > 0 ? Math.PI / 2 : -Math.PI / 2), sc, v);
+          if (rnd() < 0.55) { // back row
+            tr.posAt(s + rnd() * 3, lat + side * (half + 10 + rnd() * 6), p);
+            tr.distInfo(p.x, p.z, info);
+            if (info.d > tr.limit + 6 && !nearCanal(p.x, p.z, 16) && away(p.x, p.z) && !nearClock(p.x, p.z)) put(p.x, p.z, tr.headingAt(s) + (side > 0 ? Math.PI / 2 : -Math.PI / 2), 2 + rnd() * 0.6);
+          }
         }
+        s += wd * 0.5;
       }
     }
-    if (cn) for (const sg of [-1, 1]) for (let v = 24; v < cn.CL - 6; v += 14 + rnd() * 5) for (const vs of [-1, 1]) {
-      cn.at(sg * (cn.CW + 12 + rnd() * 2), vs * v, p);
+    if (cn) for (const sg of [-1, 1]) for (let v = 24; v < cn.CL - 6; v += 20 + rnd() * 6) for (const vs of [-1, 1]) {
+      cn.at(sg * (cn.CW + 16 + rnd() * 2), vs * v, p);
       tr.distInfo(p.x, p.z, info);
       if (info.d < tr.limit + 6) continue;
-      put(p.x, p.z, Math.atan2(-sg * cn.dx, -sg * cn.dz), 0.95 + rnd() * 0.3);
+      put(p.x, p.z, Math.atan2(-sg * cn.dx, -sg * cn.dz), 1.8 + rnd() * 0.4);
     }
     if (arena) for (let k = 0; k < 26; k++) { // a ring of houses round the battle square
-      const a = (k / 26) * TAU + rnd() * 0.1, r = 90 + rnd() * 14;
-      put(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, Math.atan2(-Math.cos(a), -Math.sin(a)), 1 + rnd() * 0.4);
+      const a = (k / 26) * TAU + rnd() * 0.1, r = 92 + rnd() * 12;
+      put(b.cx + Math.cos(a) * r, b.cz + Math.sin(a) * r, Math.atan2(-Math.cos(a), -Math.sin(a)), 1.9 + rnd() * 0.5);
     }
     for (const [x, z] of scatter(w, { count: arena ? 10 : 24, minD: 120, radius: 520, maxSlope: 0.8, s0: 2.4, s1: 3.6 }).map((o) => [o.x, o.z, o])) put(x, z, rnd() * TAU, 2.4 + rnd() * 1.2);
     // glowing windows: merged once in world space, three groups (steady and two flickering)
@@ -495,14 +511,14 @@ export default {
 
     // Chalk doodles on the pavement.
     {
-      const atlas = chalkAtlas(), mats = new THREE.MeshBasicMaterial({ map: atlas, transparent: true, depthWrite: false, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
+      const atlas = chalkAtlas(), mats = new THREE.MeshBasicMaterial({ map: atlas, transparent: true, depthWrite: false, opacity: 1, polygonOffset: true, polygonOffsetFactor: -5, polygonOffsetUnits: -5 });
       const lists4 = [[], [], [], []];
-      const cnt = arena ? 14 : 70;
+      const cnt = arena ? 20 : 120;
       for (let k = 0; k < cnt; k++) {
         const s = rnd() * tr.n, side = rnd() < 0.5 ? -1 : 1;
-        tr.posAt(s, side * (tr.halfWidth + tr.curb + 4 + rnd() * 3), p);
+        tr.posAt(s, side * (tr.halfWidth + tr.curb + 2.5 + rnd() * 3), p);
         if (nearCanal(p.x, p.z, 6)) continue;
-        lists4[k % 2].push({ x: p.x, y: w.heightAt(p.x, p.z) + 0.06, z: p.z, ry: rnd() * TAU, s: 1.1 + rnd() * 0.9 });
+        lists4[k % 2].push({ x: p.x, y: w.heightAt(p.x, p.z) + 0.06, z: p.z, ry: rnd() * TAU, s: 1.7 + rnd() * 1.2 });
       }
       if (arena) lists4[0].push({ x: b.cx, y: w.heightAt(b.cx, b.cz) + 0.06, z: b.cz, ry: 0, s: 6 });
       lists4.forEach((list, i) => {

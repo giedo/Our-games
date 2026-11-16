@@ -2,7 +2,7 @@
 import * as THREE from '../../vendor/three.module.min.js';
 
 const LH = [-32, -138]; // lighthouse spot (scaled world units)
-const WALLS = [0x2f62b0, 0xf0c050, 0xd9703c, 0xf2e2b8, 0x3f9bc0, 0xe8b4a0, 0x2b4f94, 0xf4cf6a];
+const WALLS = [0x2f62b0, 0xf0c050, 0xf5c542, 0xf4cf6a, 0xd9703c, 0xf8d860, 0xf2e2b8, 0x3f9bc0, 0xf0c050, 0xe8b4a0];
 const ROOFS = [0xd9472f, 0xe8742e, 0x1f3f7a, 0xc13d2c, 0xe8742e];
 const GREENS = [0x7fb23a, 0xc8cf4a, 0x3f9a78, 0x5aa04a, 0x2f7fa8, 0xdcc84a];
 const V2 = (a) => a.map(([x, y]) => new THREE.Vector2(x, y));
@@ -122,7 +122,7 @@ export default {
     const { THREE: T, makeNoise, mix3, smoothstep, lerp } = kit;
     const N = makeNoise(seed), N2 = makeNoise(seed + 101);
     const cx = bounds.cx, cz = bounds.cz, seaZ = bounds.maxZ + 1;
-    const g1 = new T.Color(0x8fcf48), g2 = new T.Color(0xd4dc5c), g3 = new T.Color(0x5faa44), gold = new T.Color(0xf0cc58), sand = new T.Color(0xeed08a), blue = new T.Color(0x78a8dc), rock = new T.Color(0xd8b878);
+    const g1 = new T.Color(0xa8cc50), g2 = new T.Color(0xe2d868), g3 = new T.Color(0x8cb450), gold = new T.Color(0xf0cc58), sand = new T.Color(0xeed08a), blue = new T.Color(0x78a8dc), rock = new T.Color(0xd8b878);
     const hill = (x, z) => { const d = Math.hypot(x - LH[0], z - LH[1]); return 26 * Math.exp(-((d / 58) ** 2)); };
     return {
       sky: { top: 0x1f7fe0, mid: 0x5fb8f2, bottom: 0xd2edff, sunColor: 0xfff0b0, sunDir: [-0.4, 0.6, 0.5], stars: 0, aurora: 0 },
@@ -136,10 +136,10 @@ export default {
         strokes: 0, kind: 'custom',
         draw(g, S, rnd) {
           g.lineCap = 'round';
-          for (let i = 0; i < 520; i++) {
-            const x = rnd() * S, y = rnd() * S, l = 7 + rnd() * 14, a = -0.9 + (rnd() - 0.5) * 0.5;
-            g.lineWidth = 2.5 + rnd() * 3.5;
-            g.strokeStyle = rnd() < 0.55 ? 'rgba(255,255,235,0.38)' : 'rgba(105,120,70,0.22)';
+          for (let i = 0; i < 380; i++) {
+            const x = rnd() * S, y = rnd() * S, l = 12 + rnd() * 20, a = -0.9 + (rnd() - 0.5) * 0.5;
+            g.lineWidth = 4 + rnd() * 5;
+            g.strokeStyle = rnd() < 0.5 ? 'rgba(255,250,200,0.5)' : rnd() < 0.5 ? 'rgba(110,140,50,0.34)' : 'rgba(240,200,70,0.4)';
             g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
           }
         },
@@ -262,12 +262,12 @@ export default {
     for (let i = 0; i < 9; i++) {
       let x = 0, z = 0, ok = false;
       for (let t = 0; t < 40 && !ok; t++) {
-        x = lerp(b.minX - 40, b.maxX + 40, rnd()); z = b.maxZ + (i < 4 ? 34 + rnd() * 30 : 60 + rnd() * 220);
+        x = lerp(b.minX - 40, b.maxX + 40, rnd()); z = b.maxZ + (i < 4 ? 26 + rnd() * 18 : 60 + rnd() * 220);
         ok = w.heightAt(x, z) < -4;
       }
       if (!ok) continue;
       const h = hulls[i % 4], m = new T.Mesh(geoBoat(kit, h[0], h[1]), w.mats.sceneryDouble);
-      m.position.set(x, -2, z); m.rotation.y = (i < 4 ? Math.PI / 2 : 0) + (rnd() - 0.5) * 1.2; m.scale.setScalar(1.3 + rnd() * 0.8);
+      m.position.set(x, -2, z); m.rotation.y = (i < 4 ? Math.PI / 2 : 0) + (rnd() - 0.5) * 1.2; m.scale.setScalar(i < 4 ? 2 + rnd() * 0.6 : 1.3 + rnd() * 0.8);
       const ph = rnd() * 10;
       w.scene.add(m); m.castShadow = true;
       w.updaters.push((dt, t) => { m.position.y = -2.1 + Math.sin(t * 1.1 + ph) * 0.22; m.rotation.z = Math.sin(t * 0.8 + ph) * 0.06; });

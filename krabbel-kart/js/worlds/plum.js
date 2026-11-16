@@ -1,7 +1,7 @@
 // Plum Tea Garden: whimsical storybook purple and teal with cream and soft gold.
 import * as THREE from '../../vendor/three.module.min.js';
 
-const PURPLE = 0x9a58a8, PURPLE2 = 0x6a3a7a, LILAC = 0xc79ad0, TEAL = 0x2f9aa0, TEAL2 = 0x5fc0b8, CREAM = 0xf6ecd0, GOLD = 0xf0cf70, PINK = 0xe88ab0, MOSS = 0x6faa48;
+const PURPLE = 0x9a58a8, PURPLE2 = 0x6a3a7a, LILAC = 0xc79ad0, TEAL = 0x2f9aa0, TEAL2 = 0x5fc0b8, CREAM = 0xf6ecd0, GOLD = 0xf0cf70, PINK = 0xe88ab0, MOSS = 0x58b8a0;
 const V2 = (a) => a.map(([x, y]) => new THREE.Vector2(x, y));
 
 // Dots stuck on the outside of a round thing: `ring(profile r at height)`.
@@ -9,8 +9,8 @@ function dots(KIT, n, rows, rAt, ySpan, color, size) {
   const { mat4 } = KIT, out = [];
   for (let k = 0; k < rows; k++) for (let i = 0; i < n; i++) {
     const a = ((i + (k % 2) * 0.5) / n) * Math.PI * 2, y = ySpan[0] + ((k + 0.5) / rows) * (ySpan[1] - ySpan[0]), r = rAt(y) + 0.02;
-    const g = new THREE.SphereGeometry(size, 9, 6);
-    out.push({ geo: g, color, matrix: mat4(Math.cos(a) * r, y, Math.sin(a) * r, 0, Math.PI / 2 - a, 0, 1, 1, 0.22) });
+    const g = new THREE.SphereGeometry(size, 10, 7);
+    out.push({ geo: g, color, matrix: mat4(Math.cos(a) * r, y, Math.sin(a) * r, 0, Math.PI / 2 - a, 0, 1, 1, 0.3) });
   }
   return out;
 }
@@ -27,7 +27,7 @@ function geoCup(KIT, body, dot) {
     { geo: new T.TorusGeometry(1.15, 0.36, 8, 14, Math.PI * 1.25).rotateZ(-Math.PI * 0.62), color: TEAL, matrix: mat4(2.55, 3.1, 0) },
     { geo: new T.TorusGeometry(2.55, 0.14, 6, 24).rotateX(Math.PI / 2), color: GOLD, matrix: mat4(0, 4.95, 0) },
   ];
-  for (const d of dots(KIT, 9, 3, (y) => rAt(y - 0.7), [1.6, 4.2], dot, 0.42)) { d.matrix.premultiply(new T.Matrix4().makeTranslation(0, 0.7, 0)); parts.push(d); }
+  for (const d of dots(KIT, 11, 3, (y) => rAt(y - 0.7), [1.5, 4.1], dot, 0.55)) { d.matrix.premultiply(new T.Matrix4().makeTranslation(0, 0.7, 0)); parts.push(d); }
   return mergeSmooth(parts);
 }
 
@@ -113,7 +113,7 @@ function geoGnarl(KIT, rnd, big) {
   for (let i = 0; i < 5; i++) { const a = (i / 5) * 6.28; parts.push({ geo: new T.SphereGeometry(0.9, 6, 5), color: 0x5f8a98, matrix: mat4(Math.cos(a) * 1.4, 0.3, Math.sin(a) * 1.4, 0, 0, 0, 1.4, 0.7, 1) }); parts.push({ geo: new T.SphereGeometry(0.55, 6, 4), color: MOSS, matrix: mat4(Math.cos(a) * 1.6, 0.8, Math.sin(a) * 1.6) }); }
   parts.push({ geo: new T.CylinderGeometry(0.4, 0.7, 4, 6), color: 0x5f8a98, matrix: mat4(1.4, 7.4, 0, 0, 0, -0.7) });
   parts.push({ geo: new T.CylinderGeometry(0.4, 0.7, 4, 6), color: 0x5f8a98, matrix: mat4(-1.3, 7.2, 0.4, 0.2, 0, 0.7) });
-  const cols = [0xa8c850, 0xe0cc60, 0x6faa48, 0x8ccf6a];
+  const cols = [0x6fd0b8, 0xe6cf78, 0xc79ad0, 0x8ee0cc];
   const n = big ? 16 : 7;
   for (let i = 0; i < n; i++) { const a = rnd() * 6.28, r = Math.sqrt(rnd()) * 4.2, c = cols[i % 4]; parts.push({ geo: new T.IcosahedronGeometry(1.5 + rnd() * 1.3, 1), color: c, bottom: new T.Color(c).multiplyScalar(0.6), matrix: mat4(Math.cos(a) * r, 8.2 + rnd() * 3.2, Math.sin(a) * r) }); }
   return mergeSmooth(parts);
@@ -123,7 +123,7 @@ function geoFireweed(KIT) {
   const { mergeSmooth, mat4 } = KIT, T = THREE, parts = [];
   for (let k = 0; k < 3; k++) {
     const x = (k - 1) * 0.55, h = 2.2 + k * 0.3;
-    parts.push({ geo: new T.CylinderGeometry(0.04, 0.06, h, 4), color: 0x5fa050, matrix: mat4(x, h / 2, 0) });
+    parts.push({ geo: new T.CylinderGeometry(0.04, 0.06, h, 4), color: 0x58b8a0, matrix: mat4(x, h / 2, 0) });
     for (let i = 0; i < 6; i++) parts.push({ geo: new T.SphereGeometry(0.2 - i * 0.015, 5, 4), color: i % 2 ? 0xd878b8 : 0xb070c8, matrix: mat4(x + (i % 2 ? 0.1 : -0.1), h - 0.2 - i * 0.2, 0) });
   }
   return mergeSmooth(parts);
@@ -181,27 +181,25 @@ export default {
     const { THREE: T, makeNoise, mix3, smoothstep, lerp } = kit;
     const N = makeNoise(seed), N2 = makeNoise(seed + 101), N3 = makeNoise(seed + 5);
     const cx = bounds.cx, cz = bounds.cz;
-    const moss = new T.Color(0x6aac62), olive = new T.Color(0xa4bb62), tealg = new T.Color(0x3a9c8a), flower = new T.Color(0xb070c0), pink = new T.Color(0xe08ab8), sandc = new T.Color(0xe8dcb0), shore = new T.Color(0x5fb8a8);
+    const moss = new T.Color(0x78d0b4), olive = new T.Color(0x9ce0c4), tealg = new T.Color(0x3aa896), flower = new T.Color(0xb48ccc), pink = new T.Color(0xc9a0d8), sandc = new T.Color(0xf2e8cc), shore = new T.Color(0x5fb8a8), plum = new T.Color(0x8a5ea0), cream = new T.Color(0xf4ead0);
     const lake = (x, z) => smoothstep(1.0, 0.55, Math.hypot((x - cx) / 95, (z - (cz + 12)) / 45));
     const outer = (x, z) => smoothstep(0.15, 0.4, N3.fbm(x * 0.005 + 9, z * 0.005, 2)) * smoothstep(300, 380, Math.hypot(x - cx, z - cz));
     return {
-      sky: { top: 0x58aab8, mid: 0xb4d8a4, bottom: 0xf4e8b4, sunColor: 0xfff0b0, sunDir: [0.3, 0.55, 0.55], stars: 0, aurora: 0 },
-      fog: { color: 0xd2e0a8, near: 120, far: 850 },
-      light: { sun: 0xfff0b8, sunI: 2.2, sky: 0xcfe8d0, ground: 0xb898c8, hemiI: 1.75 },
+      sky: { top: 0x58aab8, mid: 0x9cd8cc, bottom: 0xf4e8c8, sunColor: 0xfff0b0, sunDir: [0.3, 0.55, 0.55], stars: 0, aurora: 0 },
+      fog: { color: 0xcce4dc, near: 140, far: 900 },
+      light: { sun: 0xfff0b8, sunI: 2.2, sky: 0xd4ece4, ground: 0xb898c8, hemiI: 1.75 },
       water: { level: -2.5, shallow: 0x6fd0c0, deep: 0x2a8a98, foam: 0xf6ecd0, ice: 0 },
-      road: { tint: 0x9d7eb8, line: '#f6ecd0', curbA: '#2f9aa0', curbB: '#f6ecd0', shoulder: 0x9ab858 },
+      road: { tint: 0xeadcf2, line: '#f6ecd0', curbA: '#2f9aa0', curbB: '#f6ecd0', shoulder: 0xe8dcc0 },
       clouds: { color: 0xffffff, count: 0, minY: 150, maxY: 230 },
       ambient: { kind: 'pollen', color: 0xfff4b8, cfg: { n: 420, box: 80, size: 0.8, vel: [0.3, 0.35, 0.1], op: 0.8 } },
       detail: {
         strokes: 0, kind: 'custom',
         draw(g, S, rnd) {
-          for (let i = 0; i < 90; i++) {
-            const x = rnd() * S, y = rnd() * S, r = 1.5 + rnd() * 2.5;
-            g.fillStyle = i % 3 ? 'rgba(255,255,240,0.45)' : 'rgba(110,60,120,0.22)';
+          for (let i = 0; i < 40; i++) {
+            const x = rnd() * S, y = rnd() * S, r = 3 + rnd() * 5;
+            g.fillStyle = i % 3 ? 'rgba(255,250,225,0.3)' : 'rgba(150,100,180,0.16)';
             g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill();
           }
-          g.lineCap = 'round';
-          for (let i = 0; i < 260; i++) { const x = rnd() * S, y = rnd() * S; g.strokeStyle = 'rgba(60,110,50,0.18)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 4, y - 3 - rnd() * 5); g.stroke(); }
         },
       },
       blendNear: 8, blendFar: 44,
@@ -213,14 +211,17 @@ export default {
         return lerp(lerp(h, -9, outer(x, z)), -9, lake(x, z));
       },
       color(x, z, h, slope, d, out) {
-        const n = N2.noise(x * 0.02, z * 0.02) * 0.5 + 0.5;
-        mix3(out, moss, olive, smoothstep(0.4, 0.62, n));
-        mix3(out, out, tealg, smoothstep(0.45, 0.65, N.noise(x * 0.012 + 20, z * 0.012) * 0.5 + 0.5) * 0.9);
-        const f = N3.noise(x * 0.03 + 7, z * 0.03) * 0.5 + 0.5;
-        mix3(out, out, f > 0.72 ? pink : flower, smoothstep(0.55, 0.65, f) * 0.85);
+        const n = N2.noise(x * 0.006, z * 0.006) * 0.5 + 0.5;
+        mix3(out, moss, olive, smoothstep(0.35, 0.65, n));
+        mix3(out, out, tealg, smoothstep(0.45, 0.7, N.noise(x * 0.005 + 20, z * 0.005) * 0.5 + 0.5) * 0.8);
+        const f = N3.noise(x * 0.007 + 7, z * 0.007) * 0.5 + 0.5;
+        mix3(out, out, flower, smoothstep(0.55, 0.75, f) * 0.7);
+        mix3(out, out, plum, smoothstep(0.2, 0.55, slope) * 0.55);
+        if (h > 25) mix3(out, out, plum, smoothstep(25, 90, h) * 0.6);
+        if (h > 90) mix3(out, out, pink, smoothstep(90, 150, h) * 0.5);
+        mix3(out, out, cream, smoothstep(24, 10, d) * 0.4);
         if (h < 0.3) mix3(out, out, sandc, smoothstep(0.3, -1.4, h) * 0.8);
         if (h < -2) mix3(out, out, shore, smoothstep(-2, -5, h));
-        if (h > 70) mix3(out, out, tealg, smoothstep(70, 130, h) * 0.5);
         return out;
       },
     };
@@ -237,20 +238,14 @@ export default {
     const noShadow = (m) => { if (m) m.castShadow = false; return m; };
 
     // Giant polka-dot teacups on the inside of the sharpest bends, with steam curls.
-    const order = []; for (let i = 0; i < tr.n; i++) order.push(i);
-    order.sort((a, c) => Math.abs(tr.curv[c]) - Math.abs(tr.curv[a]));
-    const picked = [];
-    for (const i of order) {
-      if (picked.length >= 7) break;
-      if (picked.some((j) => Math.min(Math.abs(i - j), tr.n - Math.abs(i - j)) < 60) || i < 30) continue;
-      const side = tr.curv[i] > 0 ? -1 : 1;
-      tr.posAt(i, side * (hw + tr.curb + 17 + rnd() * 6), p);
+    const cupSpots = [], cupF = [0.04, 0.1, 0.17, 0.24, 0.32, 0.4, 0.47, 0.53, 0.6, 0.68, 0.76, 0.82, 0.88, 0.94];
+    cupF.forEach((f, k) => {
+      const i = Math.floor(f * tr.n), cs = 2.1 + rnd() * 0.3, side = k % 2 ? 1 : -1;
+      tr.posAt(i, side * (hw + tr.curb + 4.9 * cs + 3), p);
       tr.distInfo(p.x, p.z, info);
-      if (w.heightAt(p.x, p.z) < -1 || info.d < hw + 12) continue;
-      picked.push(i); picked[picked.length - 1] = i;
-      picked.spots = picked.spots || []; picked.spots.push({ x: p.x, y: w.heightAt(p.x, p.z) - 0.3, z: p.z, ry: rnd() * TAU, rz: (rnd() - 0.5) * 0.12, s: 2.2 + rnd() * 0.8 });
-    }
-    const cupSpots = picked.spots || [];
+      if (w.heightAt(p.x, p.z) < -1 || info.d < hw + 4.9 * cs + 2 || w.inIsland(p.x, p.z)) return;
+      cupSpots.push({ x: p.x, y: w.heightAt(p.x, p.z) - 0.3, z: p.z, ry: rnd() * TAU, rz: (rnd() - 0.5) * 0.1, s: cs });
+    });
     const cupCols = [[PURPLE, TEAL2], [PINK, TEAL], [TEAL, PINK], [LILAC, PURPLE2]];
     [0, 1].forEach((v) => instanced(w, geoCup(kit, cupCols[v][0], cupCols[v][1]), M, cupSpots.filter((_, k) => k % 2 === v), 8).castShadow = true);
     const steam = instanced(w, geoSteam(kit), w.mats.scenery, cupSpots.map((c) => ({ ...c, y: c.y + 5.4 * c.s })));
@@ -266,15 +261,15 @@ export default {
     });
 
     // Roses in bottles, crooked houses, cactus pots, animal totems, gnarled trees.
-    [[0x58b8a8, PINK], [0x9a70b8, 0xf2a8c8], [0x58b8a8, 0xf6ecd0]].forEach(([g, r]) => instanced(w, geoRoseBottle(kit, g, r), M, alongTrack(w, { count: 5, d0: 8, d1: 26, minH: 0, s0: 1.3, s1: 2.0, sink: 0.1 }), 3).castShadow = true);
+    [[0x58b8a8, PINK], [0x9a70b8, 0xf2a8c8], [0x58b8a8, 0xf6ecd0]].forEach(([g, r]) => instanced(w, geoRoseBottle(kit, g, r), M, alongTrack(w, { count: 4, d0: 4, d1: 9, minH: 0, s0: 2.3, s1: 3.2, sink: 0.1 }), 3).castShadow = true);
     const houses = [[TEAL, PURPLE], [PURPLE, TEAL], [0xe8a0c0, PURPLE2], [TEAL2, PURPLE]];
     houses.forEach(([lo, ro]) => instanced(w, geoHouse(kit, rnd, lo, ro), M, faceRoad(alongTrack(w, { count: 5, d0: 16, d1: 40, minH: 0.5, s0: 1.3, s1: 1.7, sink: 0.4 })), 4.5).castShadow = true);
-    [0xb86a8a, 0xd8a868, PURPLE].forEach((c) => noShadow(instanced(w, geoCactusPot(kit, c), M, alongTrack(w, { count: 22, d0: 3, d1: 14, minH: 0, s0: 0.9, s1: 1.6 }), 1)));
+    [0xb86a8a, 0xd8a868, PURPLE].forEach((c) => noShadow(instanced(w, geoCactusPot(kit, c), M, alongTrack(w, { count: 9, d0: 3, d1: 14, minH: 0, s0: 0.9, s1: 1.6 }), 1)));
     instanced(w, geoTotem(kit), M, faceRoad(alongTrack(w, { count: 5, even: true, phase: 0.2, d0: 14, d1: 30, minH: 0, s0: 1.6, s1: 2.1, sink: 0.2 })), 4).castShadow = true;
     instanced(w, geoGnarl(kit, rnd, true), M, alongTrack(w, { count: 8, even: true, phase: 0.6, d0: 14, d1: 34, minH: 0, s0: 1.3, s1: 1.9 }), 5).castShadow = true;
-    noShadow(instanced(w, geoGnarl(kit, rnd, false), M, scatter(w, { count: 55, minH: 0, maxSlope: 0.45, s0: 0.9, s1: 1.6, radius: 440 }), 3));
-    noShadow(instanced(w, geoFireweed(kit), M, scatter(w, { count: 120, minH: 0, maxD: 70, maxSlope: 0.5, s0: 0.9, s1: 1.7 }), 0));
-    noShadow(instanced(w, geoToad(kit), M, scatter(w, { count: 40, minH: 0, maxD: 70, maxSlope: 0.4, s0: 0.8, s1: 1.7 }), 1.5));
+    noShadow(instanced(w, geoGnarl(kit, rnd, false), M, scatter(w, { count: 28, minH: 0, maxSlope: 0.45, s0: 0.9, s1: 1.6, radius: 440 }), 3));
+    noShadow(instanced(w, geoFireweed(kit), M, scatter(w, { count: 60, minH: 0, maxD: 70, maxSlope: 0.5, s0: 0.9, s1: 1.7 }), 0));
+    noShadow(instanced(w, geoToad(kit), M, scatter(w, { count: 24, minH: 0, maxD: 70, maxSlope: 0.4, s0: 0.8, s1: 1.7 }), 1.5));
 
     // Pinwheels spinning beside the road.
     const pinSpots = alongTrack(w, { count: 10, d0: 3, d1: 8, minH: 0, s0: 1, s1: 1 });
