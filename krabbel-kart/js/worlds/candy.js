@@ -214,10 +214,10 @@ export default {
         return lerp(h, -7, sea(x, z));
       },
       color(x, z, h, slope, d, out) {
-        const n = N2.noise(x * 0.012, z * 0.012) * 0.5 + 0.5;
-        mix3(out, cream, peach, smoothstep(0.45, 0.9, n) * 0.4);
-        const b = N.noise(x * 0.02 + 40, z * 0.02) * 0.5 + 0.5;
-        mix3(out, out, blush, smoothstep(0.55, 0.8, b) * 0.85);
+        const n = N2.noise(x * 0.006, z * 0.006) * 0.5 + 0.5;
+        mix3(out, cream, peach, smoothstep(0.3, 0.9, n) * 0.3);
+        const b = N.noise(x * 0.007 + 40, z * 0.007) * 0.5 + 0.5;
+        mix3(out, out, blush, smoothstep(0.35, 0.8, b) * 0.7);
         if (slope > 0.3) mix3(out, out, peach, smoothstep(0.3, 0.8, slope) * 0.25);
         if (h > 40) mix3(out, out, white, smoothstep(40, 100, h) * 0.7);
         if (h < 0.5) mix3(out, out, blue, smoothstep(0.5, -3, h));
@@ -239,7 +239,7 @@ export default {
     };
 
     // Big arches straddling the road, three soft bands each.
-    const arches = [0.2, 0.55, 0.88].map((f) => {
+    const arches = [0.2, 0.38, 0.55, 0.88].map((f) => {
       const i = Math.floor(f * tr.n);
       return { x: tr.px[i], y: tr.py[i], z: tr.pz[i], ry: tr.heading[i], s: 1 };
     });
@@ -261,6 +261,10 @@ export default {
     // Stacked discs with vases, oversized cups with donuts, mushroom stools.
     instanced(w, geoStack(kit, rnd), M, alongTrack(w, { count: 9, d0: 16, d1: 40, minH: 0, s0: 0.9, s1: 1.4, sink: 0.2 }), 5).castShadow = true;
     instanced(w, geoCup(kit), M, faceRoad(alongTrack(w, { count: 9, even: true, phase: 0.3, d0: 16, d1: 30, minH: 0, s0: 1.8, s1: 2.4, sink: 0.3 })), 6).castShadow = true;
+    // Big clay landmarks close to the road: cups with donuts, stacked discs, pom-pom clusters.
+    instanced(w, geoCup(kit), M, faceRoad(alongTrack(w, { count: 5, even: true, phase: 0.1, d0: 13, d1: 19, minH: 0, s0: 2.1, s1: 2.6, sink: 0.3 })), 6).castShadow = true;
+    instanced(w, geoStack(kit, rnd), M, alongTrack(w, { count: 4, even: true, phase: 0.45, d0: 13, d1: 18, minH: 0, s0: 1.4, s1: 1.8, sink: 0.2 }), 5).castShadow = true;
+    [[BLUE, 0xb6cdf4], [BLUSH, BLUE]].forEach((cols, i) => noShadow(instanced(w, geoPom(kit, rnd, cols, false), M, alongTrack(w, { count: 5, even: true, phase: 0.2 + i * 0.5, d0: 9, d1: 15, minH: 0, s0: 2.3, s1: 3.0 }), 4)));
     noShadow(instanced(w, geoMushroom(kit, CREAM), M, scatter(w, { count: 30, minH: 0, maxD: 70, maxSlope: 0.4, s0: 0.9, s1: 1.8, minD: tr.limit + 3 }), 1.6));
     noShadow(instanced(w, geoMushroom(kit, BLUSH), M, scatter(w, { count: 22, minH: 0, maxD: 70, maxSlope: 0.4, s0: 0.9, s1: 1.8, minD: tr.limit + 3 }), 1.6));
 
