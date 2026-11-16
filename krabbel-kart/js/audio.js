@@ -22,13 +22,13 @@ function chordOf(sym) {
 // one string per bar, written as note/length with the length in sixteenths.
 const SONGS = {
   menu: {
-    bpm: 104, style: 'soft', lead: 'whistle',
-    chords: 'C Am F G C Am Dm,G C F G Em Am F G C C',
+    bpm: 120, style: 'house', lead: 'pan',
+    chords: 'F C Dm Am F C Dm C F C Am Dm F Em Dm C',
     melody: [
-      'e5/4 g5/2 e5/2 c5/4 d5/4', 'e5/6 d5/2 c5/4 a4/4', 'f5/4 a5/2 f5/2 c5/4 d5/4', 'd5/6 e5/2 d5/4 b4/4',
-      'e5/4 g5/2 e5/2 c6/4 b5/4', 'a5/6 g5/2 e5/4 c5/4', 'd5/2 f5/2 a5/4 g5/2 f5/2 d5/4', 'c5/8 -/8',
-      'a5/4 c6/4 a5/4 f5/4', 'g5/4 b5/4 g5/4 d5/4', 'g5/6 e5/2 b4/4 e5/4', 'a4/2 c5/2 e5/4 a5/8',
-      'a5/4 c6/4 a5/4 f5/4', 'b5/4 d6/4 b5/4 g5/4', 'c6/4 g5/4 e5/4 g5/4', 'c5/8 -/8',
+      'a5/3 c6/3 a5/2 g5/4 e5/4', 'g5/3 e5/3 c5/2 -/4 d5/2 e5/2', 'f5/3 a5/3 f5/2 e5/4 d5/4', 'e5/3 c5/3 a4/2 -/4 c5/2 e5/2',
+      'a5/3 c6/3 a5/2 g5/4 e5/4', 'g5/3 e5/3 g5/2 c6/4 -/4', 'd6/3 c6/3 a5/2 f5/4 a5/4', 'g5/6 e5/2 c5/4 -/4',
+      'c6/2 a5/2 c6/2 a5/2 f5/4 a5/4', 'c6/2 g5/2 c6/2 g5/2 e5/4 g5/4', 'c6/2 a5/2 c6/2 a5/2 e5/4 a5/4', 'd6/3 c6/3 a5/2 f5/4 -/4',
+      'a5/3 c6/3 a5/2 g5/4 e5/4', 'g5/3 b5/3 g5/2 e5/4 d5/4', 'f5/3 a5/3 d6/2 c6/4 a5/4', 'g5/3 e5/3 c6/2 -/8',
     ],
   },
   meadow: {
@@ -88,6 +88,8 @@ const STYLES = {
   gallop: { kick: [0, 6, 8], snare: [4, 12], hat: [0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15], hatVol: 0.34, bass: [[0, 0], [2, 0], [3, 0], [4, 7], [6, 0], [7, 0], [8, 0], [10, 0], [11, 0], [12, 7], [14, 12], [15, 7]], bassLen: 1, comp: 'strum', level: 1 },
   calypso: { kick: [0, 6, 12], snare: [], rim: [4, 10, 14], hat: [], shaker: true, conga: [3, 7, 11, 13], bass: [[0, 0], [3, 0], [6, 7], [8, 0], [11, 7], [14, 12]], bassLen: 2, comp: 'offbeat', level: 1 },
   sleigh: { kick: [0, 8], snare: [4, 12], hat: [0, 2, 4, 6, 8, 10, 12, 14], hatVol: 0.3, sleigh: true, bass: [[0, 0], [2, 0], [4, 12], [6, 0], [8, 0], [10, 0], [12, 12], [14, 7]], bassLen: 1.6, comp: 'arp', level: 1 },
+  // Chill house for the menus: kick on every beat, open hats in between, off-beat bass, soft piano stabs.
+  house: { kick: [0, 4, 8, 12], snare: [4, 12], hat: [2, 6, 10, 14], hatVol: 0.7, shaker: true, bass: [[2, 0], [6, 0], [10, 0], [11, 12], [14, 7]], bassLen: 1.5, comp: 'keys', level: 0.95 },
   march: { kick: [0, 8], snare: [4, 12, 14, 15], hat: [0, 2, 4, 6, 8, 10, 12, 14], hatVol: 0.3, bass: [[0, 0], [4, 7], [8, 0], [12, 7]], bassLen: 3, comp: 'stab', level: 1 },
 };
 
@@ -506,6 +508,16 @@ export class GameAudio {
     } else if (st.comp === 'arp' && pos % 2 === 0) {
       const order = [0, 1, 2, 1, 2, 1, 0, 1];
       this._bell(C, mtof(tri[order[pos / 2]] + 12), t, 0.085 * L, 0.5);
+    } else if (st.comp === 'keys') {
+      // A quiet pad under syncopated piano stabs; the added seventh keeps it mellow.
+      if (pos === 0) for (const m of tri) this._voice(C, { freq: mtof(m), t, dur: sd * 15.5, vol: 0.04 * L, attack: 0.2, sustain: 1, release: 0.4, parts: [{ type: 'triangle', detune: -5 }, { type: 'sawtooth', detune: 6, gain: 0.2 }] });
+      if (pos === 0 || pos === 3 || pos === 6 || pos === 10 || pos === 13) {
+        const sev = 60 + ch.root + (ch.minor ? 10 : 11);
+        for (const m of [tri[0] + 12, tri[1] + 12, tri[2] + 12, sev > 71 ? sev : sev + 12]) {
+          this._voice(C, { freq: mtof(m), t, dur: sd * 1.6, vol: 0.06 * L, attack: 0.004, decay: 0.16, sustain: 0.25, release: 0.12,
+            filter: { f0: 3200, f1: 1100, time: 0.14 }, parts: [{ type: 'triangle' }, { type: 'sine', ratio: 2, gain: 0.35 }, { type: 'sawtooth', gain: 0.12 }] });
+        }
+      }
     } else if (st.comp === 'stab' && (pos === 0 || pos === 8)) {
       for (const m of tri) this._brass(C, mtof(m), t, sd * 3, 0.07 * L);
     }
