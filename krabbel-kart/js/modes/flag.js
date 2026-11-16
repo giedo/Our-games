@@ -256,7 +256,7 @@ export class FlagMode extends BattleMode {
       headline: win < 0 ? t('battle.tie') : t(win ? 'battle.blueWins' : 'battle.redWins'),
       rows: this.race.sorted.map((k) => ({
         place: k.place, name: k.name, human: k.human, playerIndex: k.playerIndex, driver: k.driver, index: this.race.karts.indexOf(k), team: k.team,
-        extra: [{ text: `${k.caps} ${t('battle.caps')}`, cls: 'xc' }, { text: `${k.hitsMade} ${t('battle.hits')}`, cls: 'xc' }],
+        extra: [{ text: `${t("battle.caps")}: ${k.caps}`, cls: "xc" }, { text: `${t("battle.hits")}: ${k.hitsMade}`, cls: "xc" }],
       })),
     };
   }

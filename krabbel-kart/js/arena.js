@@ -71,7 +71,7 @@ function carousel(w) {
   starMesh.castShadow = true;
   const grp = new THREE.Group();
   grp.add(baseMesh, crownMesh, starMesh);
-  grp.position.set(b.cx, y, b.cz);
+  grp.position.set(b.cx, y, b.cz); grp.scale.setScalar(1.35);
   w.scene.add(grp);
   w.updaters.push((dt, t) => { crownMesh.rotation.y = t * 0.45; starMesh.rotation.y = -t * 0.9; starMesh.position.y = 14.6 + Math.sin(t * 2) * 0.25; });
 }

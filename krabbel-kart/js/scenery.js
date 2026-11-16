@@ -592,13 +592,15 @@ function island(w) {
     w.scene.add(m);
     w.updaters.push((dt, t) => { m.position.y = Math.sin(t * 1.1 + ph) * 0.25 - 0.1; m.rotation.z = Math.sin(t * 0.8 + ph) * 0.06; });
   }
-  // Volcano: glowing crater + rising smoke.
+  // Volcano: glowing crater + rising smoke (not in the middle of an arena island).
+  if (!w.inIsland(vol.x, vol.z)) {
   const cy = w.heightAt(vol.x, vol.z);
   const glow = new THREE.Mesh(new THREE.CircleGeometry(17, 14), new THREE.MeshBasicMaterial({ color: 0xff7a1a, fog: false }));
   glow.rotation.x = -Math.PI / 2; glow.position.set(vol.x, cy + 6, vol.z);
   w.scene.add(glow);
   w.updaters.push((dt, t) => { glow.material.color.setRGB(1, 0.32 + Math.sin(t * 2.3) * 0.1, 0.05); });
   w.addSmoke(vol.x, cy + 14, vol.z, 0xd8d0c8);
+  }
   sprinkle(w, [0xff6fae, 0xffffff, 0xffd21f, 0xff8a3c], 1100, 0.62);
   balloons(w, 3, [[0xff4b4b, 0xfff1a0], [0x2fd0d0, 0xffffff], [0xffcf33, 0xff7ac0]]);
 }
