@@ -60,13 +60,13 @@ function geoGlowTree(rnd, pal) {
 
 // Dark solid with glowing edges: returns { body, lines }.
 function geoNeonHouse(kind, col) {
-  const body = [], lines = [], th = 0.2;
+  const body = [], lines = [], th = 0.4;
   if (kind === 0) { // cottage with a pointy roof
     body.push({ geo: new THREE.BoxGeometry(6, 4.4, 5), color: DARK, matrix: mat4(0, 2.2, 0) });
     const r = new THREE.ConeGeometry(4.6, 3.2, 4); r.rotateY(Math.PI / 4);
     body.push({ geo: r, color: 0x1c0f3e, matrix: mat4(0, 6, 0, 0, 0, 0, 1, 1, 0.83) });
     boxEdges(lines, 0, 0, 0, 6, 4.4, 5, th, col);
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) lines.push(seg([sx * 3, 4.4, sz * 2.5], [0, 7.6, 0], th, MAG));
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) lines.push(seg([sx * 3, 4.4, sz * 2.5], [0, 7.6, 0], 0.26, MAG));
     for (const x of [-1.8, 1.8]) boxEdges(lines, x, 2.2, 2.52, 1.1, 1.2, 0.05, 0.12, PCH);
     lines.push({ geo: new THREE.BoxGeometry(0.9, 1.9, 0.08), color: ORG, matrix: mat4(0, 0.95, 2.52) });
     for (const x of [-1.8, 1.8]) lines.push({ geo: new THREE.BoxGeometry(0.95, 1.05, 0.06), color: new THREE.Color(0xffa040), matrix: mat4(x, 2.2, 2.53) });
@@ -75,8 +75,8 @@ function geoNeonHouse(kind, col) {
     boxEdges(lines, 0, 0, 0, 5.4, 13, 5.4, th, col);
     for (let f = 0; f < 4; f++) {
       const y = 2.4 + f * 3;
-      lines.push(seg([-2.9, y - 1.1, 2.9], [2.9, y - 1.1, 2.9], 0.14, CYA));
-      lines.push(seg([-2.9, y - 0.2, 2.9], [2.9, y - 0.2, 2.9], 0.08, CYA));
+      lines.push(seg([-2.9, y - 1.1, 2.9], [2.9, y - 1.1, 2.9], 0.26, CYA));
+      lines.push(seg([-2.9, y - 0.2, 2.9], [2.9, y - 0.2, 2.9], 0.16, CYA));
       for (const x of [-1.4, 1.4]) lines.push({ geo: new THREE.BoxGeometry(1.0, 1.3, 0.06), color: new THREE.Color(f % 2 ? 0xffa040 : 0xff5ad0), matrix: mat4(x, y + 0.5, 2.72) });
     }
     lines.push(seg([-2.7, 13, -2.7], [-2.7, 15, -2.7], 0.12, MAG));
@@ -523,9 +523,12 @@ void main(){
   float t = sin(vW.x * 0.004 + vW.z * 0.0031 + vW.y * 0.03);
   vec3 cA = mix(vec3(0.1, 0.9, 1.0), vec3(1.0, 0.17, 0.84), smoothstep(-0.4, 0.3, t));
   vec3 cB = mix(cA, vec3(1.0, 0.54, 0.16), smoothstep(0.35, 0.9, t));
-  float near = smoothstep(16.0, 40.0, vD) * smoothstep(0.0015, 0.008, fw) * (1.0 - smoothstep(0.2, 0.55, fw)) * (1.0 - 0.5 * smoothstep(250.0, 700.0, vFogDepth));
+  float near = smoothstep(15.0, 32.0, vD) * smoothstep(0.0015, 0.008, fw) * (1.0 - smoothstep(0.2, 0.55, fw)) * (1.0 - 0.5 * smoothstep(250.0, 700.0, vFogDepth));
+  float fd = vD / 5.5; float fwd = max(fwidth(fd), 0.0005);
+  float dd = min(fract(fd), 1.0 - fract(fd));
+  float rl = (1.0 - smoothstep(fwd * 0.7, fwd * 2.0, dd)) * smoothstep(11.0, 15.0, vD) * (1.0 - smoothstep(34.0, 70.0, vD)) * (1.0 - smoothstep(0.1, 0.4, fwd));
   float lit = 0.35 + 0.65 * max(normalize(vN).y, 0.0);
-  vec3 c = vCol * lit * 1.6 + cB * (line * 1.1 + halo * 0.22) * near;
+  vec3 c = vCol * lit * 1.6 + cB * (line * 1.1 + halo * 0.22) * near + cB * rl * 0.6;
   gl_FragColor = vec4(c, 1.0);
   #include <colorspace_fragment>
   #include <fog_fragment>
