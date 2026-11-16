@@ -5,8 +5,8 @@ import { Mode } from './base.js';
 import { addStrings } from '../i18n.js';
 
 addStrings({
-  en: { modes: { cup: 'Grand Prix' }, modeSub: { cup: 'All the tracks, points, a podium' } },
-  nl: { modes: { cup: 'Grote Prijs' }, modeSub: { cup: 'Alle banen, punten, een podium' } },
+  en: { modes: { cup: 'Grand Prix' }, modeSub: { cup: 'Pick a cup: 3 races, points, a podium' } },
+  nl: { modes: { cup: 'Grote Prijs' }, modeSub: { cup: 'Kies een beker: 3 races, punten, een podium' } },
 });
 
 export class CupMode extends Mode {

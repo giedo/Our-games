@@ -296,7 +296,7 @@ body.touch .hud.split.p0 .hud-itemname { right: 20px; }
 .split-line { position: absolute; left: 50%; top: 0; bottom: 0; width: 6px; margin-left: -3px; background: var(--ink); }
 
 /* mode banner, action button, danger edge */
-.hud-banner { position: absolute; left: 50%; top: calc(70px + clamp(64px, 12vh, 92px) + var(--safe-t)); transform: translateX(-50%); display: none; flex-direction: column; align-items: center; max-width: 80%; padding: 4px 18px 6px; text-align: center; background: rgba(255, 255, 255, .92); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 4px 0 var(--ink); font-size: clamp(16px, 3.2vh, 26px); line-height: 1.1; }
+.hud-banner { position: absolute; left: 50%; top: calc(86px + clamp(64px, 12vh, 92px) + var(--safe-t)); transform: translateX(-50%); display: none; flex-direction: column; align-items: center; max-width: 80%; padding: 4px 18px 6px; text-align: center; background: rgba(255, 255, 255, .92); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 4px 0 var(--ink); font-size: clamp(16px, 3.2vh, 26px); line-height: 1.1; }
 .hud-banner.show { display: flex; }
 .hud-banner small { font-size: .62em; font-weight: 600; opacity: .8; }
 .hud-banner.go { background: #c9f6b9; }
@@ -310,6 +310,10 @@ body.touch .hud.split.p0 .hud-itemname { right: 20px; }
 .hud.m-roam .hud-time { display: none; }
 .hud.m-time .hud-time { font-size: clamp(22px, 4.6vh, 38px); }
 .hud-msg.split { font-size: clamp(26px, 7vh, 54px); top: 36%; }
+.hud-msg.long, .hud.split .hud-msg.long { top: 31%; left: 50%; right: auto; width: 76%; transform: translateX(-50%); font-size: clamp(22px, 5.4vh, 44px); line-height: 1.08; text-wrap: balance; -webkit-text-stroke-width: clamp(6px, 1.2vh, 10px); text-shadow: 0 4px 0 var(--ink); }
+.hud.split .hud-msg.long { font-size: clamp(18px, 4.4vh, 34px); width: 88%; }
+.hud-msg.long.show { animation: popl .45s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes popl { from { transform: translateX(-50%) scale(.3) rotate(-8deg); opacity: 0; } to { transform: translateX(-50%) scale(1) rotate(0); opacity: 1; } }
 .hud-msg.good { color: #8dff7a; }
 .hud-msg.bad { color: #ffb08a; }
 
@@ -409,5 +413,5 @@ body.portrait.touch:not(.portrait-ok) #rotate-hint { display: grid; }
   .tool { min-width: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hud-item.ready, .hud-msg.show, .hud-wrong.show { animation: none; }
+  .hud-item.ready, .hud-msg.show, .hud-msg.long.show, .hud-wrong.show { animation: none; }
 }

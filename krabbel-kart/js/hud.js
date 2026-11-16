@@ -111,7 +111,7 @@ export class Hud {
     this.msg.className = 'hud-msg';
     void this.msg.offsetWidth; // restart the pop animation
     this.msg.textContent = text;
-    this.msg.className = `hud-msg show ${cls}`;
+    this.msg.className = `hud-msg show ${cls}${text.length > 14 ? ' long' : ''}`;
     this.msgT = dur;
   }
 
@@ -227,13 +227,14 @@ export class Hud {
     g.globalAlpha = 1;
   }
 
-  // One map marker: shape 'flag', 'ring', 'star' or 'dot'.
+  // One map marker: shape 'flag', 'ring', 'star', 'sticker' or 'dot'.
   _mark(g, m) {
     const x = this.mx(m.x), y = this.my(m.z);
     g.fillStyle = m.color; g.strokeStyle = '#2a2433'; g.lineWidth = 3;
     g.beginPath();
     if (m.shape === 'ring') { g.arc(x, y, 15, 0, 6.3); g.globalAlpha = 0.45; g.fill(); g.globalAlpha = 1; g.lineWidth = 5; g.strokeStyle = m.color; g.stroke(); return; }
     if (m.shape === 'flag') { g.moveTo(x, y + 12); g.lineTo(x, y - 14); g.lineTo(x + 16, y - 8); g.lineTo(x, y - 2); g.closePath(); g.fill(); g.stroke(); return; }
+    if (m.shape === 'sticker') { g.lineWidth = 4; for (let i = 0; i < 10; i++) { const a = (i / 10) * 6.283 - 1.57, r = i % 2 ? 6 : 14; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); g.fillStyle = '#ffd21f'; g.fill(); g.stroke(); return; }
     if (m.shape === 'star') { for (let i = 0; i < 10; i++) { const a = (i / 10) * 6.283 - 1.57, r = i % 2 ? 3 : 7; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); g.fill(); return; }
     g.arc(x, y, 5, 0, 6.3); g.fill();
   }
