@@ -14,7 +14,7 @@ import balloon from './balloon.js';
 //
 // import stars from './stars.js';
 //
-// import flag from './flag.js';
+import flag from './flag.js';
 //
 // import roam from './roam.js';
 
@@ -29,7 +29,7 @@ export const MODES = [
   //
   // stars,
   //
-  // flag,
+  flag,
   //
   // roam,
 ];

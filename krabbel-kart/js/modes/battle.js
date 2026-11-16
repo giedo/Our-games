@@ -12,13 +12,13 @@ addStrings({
     time: 'Time', min: 'min', pts: 'pts', best: 'Best', pop: 'Pop!', wins: 'wins!', tie: 'It is a tie!', timeUp: 'Time is up!',
     lostAll: 'Out of balloons! New ones in 3', back: 'Back in the game!', stars: 'stars', star: 'Star!', hits: 'hits',
     red: 'Red', blue: 'Blue', redWins: 'Red team wins!', blueWins: 'Blue team wins!', duo: 'Two players', same: 'Same team', split: 'Opposite teams',
-    caps: 'flags', grab: 'grabbed the flag!', lost: 'Flag dropped!', home: 'Flag is back home', score: 'Flag home! +1', stolen: 'They have our flag!', carry: 'You have the flag! Bring it home',
+    caps: 'flags', grab: 'grabbed the flag!', lost: 'Flag dropped!', home: 'Flag is back home', score: 'Flag home! +1', stolen: 'They took our flag!', carry: 'Take it home!',
   } },
   nl: { battle: {
     time: 'Tijd', min: 'min', pts: 'pnt', best: 'Beste', pop: 'Knal!', wins: 'wint!', tie: 'Gelijkspel!', timeUp: 'De tijd is om!',
     lostAll: 'Geen ballonnen meer! Nieuwe over 3', back: 'Weer in het spel!', stars: 'sterren', star: 'Ster!', hits: 'raak',
     red: 'Rood', blue: 'Blauw', redWins: 'Rood team wint!', blueWins: 'Blauw team wint!', duo: 'Twee spelers', same: 'Zelfde team', split: 'Tegen elkaar',
-    caps: 'vlaggen', grab: 'pakte de vlag!', lost: 'Vlag gevallen!', home: 'Vlag is weer thuis', score: 'Vlag thuis! +1', stolen: 'Zij hebben onze vlag!', carry: 'Jij hebt de vlag! Breng hem thuis',
+    caps: 'vlaggen', grab: 'pakte de vlag!', lost: 'Vlag gevallen!', home: 'Vlag is weer thuis', score: 'Vlag thuis! +1', stolen: 'Zij pakten onze vlag!', carry: 'Breng hem thuis!',
   } },
 });
 
