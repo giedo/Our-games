@@ -78,6 +78,7 @@ class Pop extends Shot {
 
 registerItem({
   id: 'freeze',
+  aim: true,
   ages: ['big'],
   icon: '<svg viewBox="0 0 64 64"><rect x="26" y="40" width="12" height="20" rx="3" fill="#f2c79a" stroke="#2a2433" stroke-width="3"/><path d="M16 38V16c0-8 6-12 16-12s16 4 16 12v22z" fill="#4fd0ff" stroke="#2a2433" stroke-width="3" stroke-linejoin="round"/><path d="M16 26h32v12H16z" fill="#ff7ac0"/><path d="M16 38V16c0-8 6-12 16-12s16 4 16 12v22z" fill="none" stroke="#2a2433" stroke-width="3" stroke-linejoin="round"/><path d="M22 12c2-4 6-5 10-5" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none" opacity=".8"/><path d="M52 8l-3 4 4 2zM12 48l4 2-2 4z" fill="#bfefff" stroke="#2a2433" stroke-width="2" stroke-linejoin="round"/></svg>',
   weight: (k, f) => (k.place === 1 ? 0.3 : 0.7 + 1.3 * f),

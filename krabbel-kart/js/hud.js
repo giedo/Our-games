@@ -37,13 +37,15 @@ export class Hud {
     this.act = el('button', 'hud-act');
     this.act.addEventListener('pointerdown', (e) => { e.stopPropagation(); const a = race.mode.hudAction(kart); if (a) { game.audio.play('click'); a.fn(); } });
     this.skip = el('div', 'hud-skip', t('tapToSkip'));
+    // Rear-view mirror frame: the 3D view is drawn into it by the game (main.js) while reversing.
+    this.mirrorEl = el('div', 'hud-mirror', `<span>${t('mirror')}</span>`);
     const col = el('div', 'hud-col');
     this.stars = el('div', 'hud-stars');
     this.itemName = el('div', 'hud-itemname');
     col.append(this.lap, this.time, this.stars, this.extra);
     const tl = el('div', 'hud-tl');
     tl.append(this.pos, col);
-    root.append(this.vig, tl, this.banner, this.act, this.map, this.msg, this.wrong, this.alert, this.item, this.itemName, this.skip);
+    root.append(this.vig, this.mirrorEl, tl, this.banner, this.act, this.map, this.msg, this.wrong, this.alert, this.item, this.itemName, this.skip);
     this._buildTouch(root);
     game.hudRoot.appendChild(root);
     this._cache = {};
@@ -56,7 +58,8 @@ export class Hud {
     const input = this.game.input, i = this.index;
     const pad = this.pad = el('div', 'touch-steer', '<span>◀</span><span>▶</span>');
     const drift = el('button', 'touch-btn touch-drift', t('drift'));
-    const brake = el('button', 'touch-btn touch-brake', t('brake'));
+    const rev = this.race.mode.reverseButton;
+    const brake = el('button', 'touch-btn touch-brake' + (rev ? ' rev' : ''), rev ? `<b>▼</b>${t('reverse')}` : t('brake'));
     root.append(pad, drift, brake);
     const steerFrom = (e) => {
       const r = pad.getBoundingClientRect();
@@ -75,9 +78,28 @@ export class Hud {
       btn.addEventListener('pointerup', off); btn.addEventListener('pointercancel', off);
     };
     hold(drift, 'drift'); hold(brake, 'brake');
-    this.item.addEventListener('pointerdown', (e) => { e.preventDefault(); input.touch[i].item = true; input.touch[i].itemTap = true; });
-    const itemOff = () => { input.touch[i].item = false; };
-    this.item.addEventListener('pointerup', itemOff); this.item.addEventListener('pointercancel', itemOff); this.item.addEventListener('pointerleave', itemOff);
+    // Item button: a tap throws forwards, a swipe down throws backwards (fired as soon as the finger moved down).
+    const it = this.item, sw = { id: null, y: 0, fired: false };
+    it.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      try { it.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+      sw.id = e.pointerId; sw.y = e.clientY; sw.fired = false;
+      it.classList.add('down');
+    });
+    it.addEventListener('pointermove', (e) => {
+      if (sw.id !== e.pointerId || sw.fired) return;
+      if (e.clientY - sw.y > Math.max(22, it.offsetHeight * 0.3)) {
+        sw.fired = true; input.touch[i].itemTap = true; input.touch[i].itemBack = true;
+        it.classList.add('back');
+        setTimeout(() => it.classList.remove('back'), 350);
+      }
+    });
+    const itemUp = (e) => {
+      if (sw.id !== e.pointerId) return;
+      if (!sw.fired && e.type === 'pointerup') { input.touch[i].itemTap = true; input.device[i] = 'touch'; }
+      sw.id = null; it.classList.remove('down');
+    };
+    it.addEventListener('pointerup', itemUp); it.addEventListener('pointercancel', itemUp);
     root.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
@@ -107,6 +129,9 @@ export class Hud {
     g.lineTo(this.mx(tr.px[0] + tr.rx[0] * 14), this.my(tr.pz[0] + tr.rz[0] * 14));
     g.stroke(); }
   }
+
+  // An item was thrown backwards: a little arrow pops on the item button.
+  backFlash() { this.message(t('thrownBack'), 0.8); }
 
   // A blinking red warning pill (a projectile is coming for you).
   warn(text, dur) { this.alert.textContent = text; this.alert.classList.add('show'); this.alertT = dur; }
@@ -204,6 +229,7 @@ export class Hud {
     const act = race.mode.hudAction(k);
     this._set('act', act ? act.label : '', (v) => { this.act.textContent = v; this.act.classList.toggle('show', !!v); });
     this._set('wrong', k.wrongWayT > 1.2 && !k.finished && race.mode.showWrongWay, (v) => this.wrong.classList.toggle('show', v));
+    this._set('mirror', !!(race.cams[this.index] && race.cams[this.index].mirror), (v) => this.mirrorEl.classList.toggle('show', v));
     this._set('boost', k.boostT > 0, (v) => this.vig.classList.toggle('show', v));
     this._set('intro', race.state === 'intro', (v) => this.skip.classList.toggle('show', v));
     this._set('fin', k.finished || k.out, (v) => this.el.classList.toggle('finished', v));

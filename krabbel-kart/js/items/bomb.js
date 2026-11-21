@@ -15,9 +15,10 @@ class Bomb {
     this.sys = sys; this.owner = kart; this.projectile = true; this.dead = false; this.t = 0;
     this.a = new THREE.Vector3(kart.x, kart.y + 1.6, kart.z);
     let lat = kart.lat;
-    const tgt = sys.race.kartAhead(kart);
+    const tgt = kart.aimBack ? sys.race.kartBehind(kart) : sys.race.kartAhead(kart);
     if (tgt && !sys.race.world.def.arena && Math.hypot(tgt.x - kart.x, tgt.z - kart.z) < 45) lat = tgt.lat * 0.7 + lat * 0.3; // aim at the one ahead
-    this.b = tr.posAt(kart.s + (dir * (25 + Math.max(0, kart.speed) * T)) / tr.seg, lat, new THREE.Vector3());
+    const dist = kart.aimBack ? 20 : 25 + Math.max(0, kart.speed) * T; // backwards: lands 20 m behind the spot it was thrown from
+    this.b = tr.posAt(kart.s + (dir * dist) / tr.seg, lat, new THREE.Vector3());
     this.pos = this.a.clone();
     this.mesh = sys.spawnMesh(geoOnce(sys, 'bomb', () => [
       { geo: new THREE.SphereGeometry(0.75, 12, 9), color: 0xff5cf0 },
@@ -66,6 +67,7 @@ class Bomb {
 
 registerItem({
   id: 'bomb',
+  aim: true,
   ages: ['big'],
   icon: '<svg viewBox="0 0 64 64"><circle cx="30" cy="38" r="22" fill="#ff5cf0" stroke="#2a2433" stroke-width="3"/><rect x="22" y="12" width="16" height="9" rx="2" fill="#c9ced8" stroke="#2a2433" stroke-width="3"/><path d="M38 14c8-6 12-2 14-10" fill="none" stroke="#2a2433" stroke-width="3" stroke-linecap="round"/><path d="M52 0l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#ffe14a" stroke="#2a2433" stroke-width="2" stroke-linejoin="round" transform="translate(-1 0)"/><path d="M20 34l3 5 5 1-4 4 1 5-5-3-5 3 1-5-4-4 5-1z" fill="#fff" opacity=".9"/><path d="M38 46l2 3 3 .5-2.5 2.5.5 3-3-2-3 2 .5-3-2.5-2.5 3-.5z" fill="#4fe9ff"/><ellipse cx="22" cy="28" rx="5" ry="3" fill="#fff" opacity=".5" transform="rotate(-35 22 28)"/></svg>',
   weight: (k, f) => (k.place === 1 ? 0.5 : 1 + 1.2 * f),

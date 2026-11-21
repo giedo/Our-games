@@ -29,6 +29,10 @@ export class Mode {
 
   // Set to false to switch off the catch-up speed boost for computer racers.
   get allowRubberBand() { return true; }
+  // Top reverse speed in m/s. Battle arenas raise it so you can really drive backwards.
+  get reverseMax() { return 8; }
+  // Touch players get a reverse button instead of a brake button (the brake reverses anyway).
+  get reverseButton() { return false; }
 
   // Called once, after all karts exist and before the first frame: place them on the grid, hand out teams.
   // Default: computer racers in front, players at the back (more overtaking fun).

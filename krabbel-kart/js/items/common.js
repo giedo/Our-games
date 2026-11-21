@@ -56,7 +56,7 @@ export const canHit = (k, owner) => k !== owner && !k.out && !k.finished && !k.i
 export function chooseTarget(sys, kart, maxD = 1e9) {
   const race = sys.race;
   if (!isArena(sys)) {
-    const a = race.kartAhead(kart);
+    const a = kart.aimBack ? race.kartBehind(kart) : race.kartAhead(kart);
     if (a && canHit(a, kart) && Math.hypot(a.x - kart.x, a.z - kart.z) < maxD) return a;
     return null;
   }

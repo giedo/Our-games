@@ -24,6 +24,47 @@ const DRIFT_BOOST = [0.7, 1.3, 2.0];
 const SPARKS = [0xffffff, 0x4fe9ff, 0xff5cf0, 0xffe14a];
 const RAINBOW = [0xff4b4b, 0xffa53c, 0xffe14a, 0x5fe06a, 0x4fb8ff, 0xb46bff];
 
+const TAU = Math.PI * 2;
+
+// Dizzy stars that circle above a racer's head after a crash. One merged mesh, shared by every kart.
+let dizzyGeo = null, dizzyMat = null;
+function dizzyStars() {
+  if (!dizzyGeo) {
+    const parts = [];
+    for (let i = 0; i < 4; i++) {
+      const sh = new THREE.Shape();
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * TAU + Math.PI / 2, r = k % 2 ? 0.11 : 0.26;
+        if (k) sh.lineTo(Math.cos(a) * r, Math.sin(a) * r); else sh.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      const g = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: false });
+      const a = (i / 4) * TAU;
+      g.translate(0, 0, -0.04);
+      g.rotateY(-a);
+      g.translate(Math.cos(a) * 0.75, Math.sin(i * 1.7) * 0.12, Math.sin(a) * 0.75);
+      parts.push(g);
+    }
+    // Merge by hand (positions + normals) so kart.js needs no extra helpers.
+    let n = 0;
+    for (const g of parts) n += (g.index ? g.index.count : g.attributes.position.count);
+    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3);
+    let o = 0;
+    for (const g of parts) {
+      const ng = g.index ? g.toNonIndexed() : g;
+      pos.set(ng.attributes.position.array, o * 3); nor.set(ng.attributes.normal.array, o * 3);
+      o += ng.attributes.position.count;
+    }
+    dizzyGeo = new THREE.BufferGeometry();
+    dizzyGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    dizzyGeo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    dizzyMat = new THREE.MeshBasicMaterial({ color: 0xffe14a });
+  }
+  const m = new THREE.Mesh(dizzyGeo, dizzyMat);
+  m.castShadow = false;
+  m.visible = false;
+  return m;
+}
+
 const _loc = {}, _loc2 = {}, _loc3 = {};
 const _v = new THREE.Vector3();
 const _aiCtx = { kmax: 0, hold: 0, race: null };
@@ -46,7 +87,7 @@ export class Kart {
     this.speed = 0; this.vy = 0; this.grounded = true; this.prevG = 0;
     this.idx = 0; this.s = 0; this.lat = 0; this.progress = 0; this.lap = 0;
     this.boostT = 0; this.boostPower = 1.38; this.spinT = 0; this.spinAngle = 0; this.hitCool = 0;
-    this.shieldT = 0; this.padCool = 0;
+    this.shieldT = 0; this.padCool = 0; this.crashT = 0; this.crashD = 1; this.dizzyT = 0; this.dizzy = null;
     this.driftDir = 0; this.driftCharge = 0; this.driftLevel = 0; this.hopT = 0;
     this.item = null; this.rollT = 0; this.rollPick = null; this.itemUses = 0; this.itemT = 0;
     this.fx = {}; this.autoSpeed = 1; this.slowMul = 0.7; this.scaleVis = 1; this.flatVis = 0;
@@ -58,8 +99,11 @@ export class Kart {
     this.pitch = 0; this.roll = 0; this.yawVis = 0; this.leanVis = 0; this.squash = 0; this.stretch = 0;
     this.offroad = false; this.wrongWayT = 0; this.steerNow = 0;
     this.aiStuckT = 0; this.aiRevT = 0; this.aiPosT = 0; this.aiPx = 0; this.aiPz = 0; this.aiLane = 0; this.aiLaneTarget = 0; this.aiLaneT = 0; this.aiItemT = 0; this.aiHold = 0;
-    this.ctl = { steer: 0, gas: 0, brake: 0, drift: false, item: false };
+    this.ctl = { steer: 0, gas: 0, brake: 0, drift: false, item: false, back: false };
+    this.aimBack = false; // true while an item is being thrown backwards (see ItemSystem.use)
     this.emitAcc = 0;
+    this.hovNow = 0; this.glow = null;
+    if (this.world.hover) this._buildGlow();
     // The driver subtly turns towards whoever is looking, so the drawing stays readable.
     const model = this.model, self = this;
     const dm = model.driverMesh;
@@ -71,6 +115,14 @@ export class Kart {
         model.pivot.updateMatrixWorld(true);
       };
     }
+  }
+
+  // A soft glowing disc under a hovering kart (anti-gravity worlds).
+  _buildGlow() {
+    const g = new THREE.Mesh(new THREE.CircleGeometry(1, 24), new THREE.MeshBasicMaterial({ color: 0x6ff3ff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    g.rotation.x = -Math.PI / 2; g.scale.set(1.35, this.model.len * 0.55, 1); g.renderOrder = 2;
+    this.model.root.add(g);
+    this.glow = g;
   }
 
   placeAt(s, lat) {
@@ -138,6 +190,32 @@ export class Kart {
   // Throw the kart into the air (springs, bouncers, ramps).
   launch(vy) {
     this.vy = vy; this.y += 0.05; this.grounded = false; this.stretch = 1;
+  }
+
+  // Drove into a road obstacle: one full turn on the spot, dizzy stars over the head, a crash sound,
+  // and the kart comes to a stop before it can drive on. Little age: shorter, and it never costs
+  // balloons or stars (mode.onHit is not called). Returns true when the kart really crashed.
+  crash(opts) {
+    const o = opts || {};
+    if (this.out || this.finished || this.isImmune() || this.crashT > 0 || this.hitCool > 0) return false;
+    const P = this.race.particles, little = this.race.age === 'little';
+    if (this.shieldT > 0) {
+      this.shieldT = 0; this.hitCool = 0.8;
+      P.burst(true, [0x8fe9ff, 0xffffff], 26, this.x, this.y + 1.3, this.z, 9, { size: 0.5, life: 0.6, gravity: 4 });
+      this.race.sfx('pop', this);
+      return false;
+    }
+    this.crashD = this.crashT = little ? 1.0 : 1.3;
+    this.dizzyT = this.crashD + 0.9;
+    this.hitCool = this.crashD + (little ? 0.9 : 1.3);
+    this.spinT = 0; this.boostT = 0; this.speed *= 0.3; this.squash = 1;
+    this.endDrift(false);
+    P.burst(true, [0xffe14a, 0xffffff, 0xffd21f], 20, this.x, this.y + 1.4, this.z, 7, { size: 0.5, life: 0.6, gravity: 6 });
+    P.burst(false, [this.world.dustColor, 0xffffff], 12, this.x, this.y + 0.4, this.z, 5, { size: 0.8, size1: 1.6, life: 0.5, gravity: 2, a: 0.6 });
+    this.race.sfx('crash', this);
+    this.gesture('hit');
+    if (!little) this.race.mode.onHit(this, o.by || null, o.cause || 'crash');
+    return true;
   }
 
   // Push the kart sideways: (nx, nz) is the direction, strength in metres per second.
@@ -239,13 +317,17 @@ export class Kart {
 
   // Computer racers decide when to use their item: the item definition says when it suits it.
   _aiItem(c, dt, kmax) {
-    c.item = false;
+    c.item = false; c.back = false;
     if (this.item && this.rollT <= 0) {
       this.aiItemT -= dt; this.aiHold += dt;
       if (this.aiItemT <= 0) {
         const d = itemById(this.item);
         _aiCtx.kmax = kmax; _aiCtx.hold = this.aiHold; _aiCtx.race = this.race;
-        if (!d || d.aiWants(this, _aiCtx)) { c.item = true; this.aiHold = 0; }
+        if (!d || d.aiWants(this, _aiCtx)) {
+          c.item = true; this.aiHold = 0;
+          // Something to throw and a rival right behind: sometimes throw it backwards.
+          c.back = !!(d && d.aim && !this.track.def.arena && this.race.someoneBehind(this, 14) && Math.random() < 0.5);
+        }
       }
     }
   }
@@ -306,8 +388,11 @@ export class Kart {
     if (this.hitCool > 0) this.hitCool -= dt;
     this.driftHeld = !!ctl.drift;
     let steer = ctl.steer, gas = ctl.gas, brake = ctl.brake, wantDrift = ctl.drift;
-    const spinning = this.spinT > 0, frozen = this.fx.frozen > 0;
-    if (spinning) this.spinT -= dt;
+    const crashing = this.crashT > 0;
+    if (crashing) this.crashT -= dt;
+    if (this.dizzyT > 0) this.dizzyT -= dt;
+    const spinning = this.spinT > 0 || crashing, frozen = this.fx.frozen > 0;
+    if (this.spinT > 0) this.spinT -= dt;
     if (spinning || frozen) { steer = 0; gas = 0; brake = 0; wantDrift = false; }
     if (race.state === 'intro' || race.state === 'countdown') { gas = 0; brake = 0; steer = 0; wantDrift = false; }
 
@@ -327,12 +412,13 @@ export class Kart {
     let vmax = base;
     if (boosting) vmax *= this.boostPower; else if (grass) vmax *= 0.5;
     if (spinning || frozen) {
-      this.speed = damp(this.speed, 0, spinning ? 1.8 : 1.2, dt);
+      this.speed = damp(this.speed, 0, crashing ? 6 : spinning ? 1.8 : 1.2, dt);
+      if (crashing) { this.pushX = damp(this.pushX, 0, 4, dt); this.pushZ = damp(this.pushZ, 0, 4, dt); }
     } else {
       if (gas > 0 && this.speed < vmax) this.speed += (15 * (1 - this.speed / vmax) + 3) * gas * dt * (boosting ? 2.6 : 1);
       if (brake > 0) {
         if (this.speed > 0.5) this.speed -= 32 * brake * dt;
-        else this.speed = Math.max(this.speed - 10 * dt, -8);
+        else { const rm = race.mode.reverseMax; this.speed = Math.max(this.speed - (rm > 8 ? 16 : 10) * dt, -rm); }
       }
       if (!gas && !brake) this.speed -= this.speed * 0.7 * dt;
       if (this.speed > vmax) this.speed = damp(this.speed, vmax, grass && !boosting ? 3.5 : 1.6, dt);
@@ -400,8 +486,11 @@ export class Kart {
     }
 
     // Height: follow the ground, but fly over crests when going fast.
-    const g = w.groundAt(this.x, this.z, _loc) + this.lift;
-    this.vy -= GRAVITY * dt;
+    // Anti-gravity worlds: the kart floats a little above the road and bobs gently.
+    const hov = w.hover ? w.hover * (1 + 0.18 * Math.sin(race.clock * 3.1 + this.playerIndex * 1.3)) : 0;
+    const g = w.groundAt(this.x, this.z, _loc) + this.lift + hov;
+    this.hovNow = hov;
+    this.vy -= (w.gravity || GRAVITY) * dt;
     this.y += this.vy * dt;
     if (this.y <= g) {
       if (!this.grounded && this.vy < -8) {
@@ -497,8 +586,10 @@ export class Kart {
     m.tilt.rotation.z = this.roll;
     const speedFrac = clamp(Math.abs(this.speed) / BASE_MAX, 0, 1.4);
     this.yawVis = damp(this.yawVis, -this.driftDir * 0.5, 9, dt);
-    if (this.spinT > 0) this.spinAngle += dt * (6 + this.spinT * 12);
+    if (this.crashT > 0) { const u = clamp(1 - this.crashT / this.crashD, 0, 1); this.spinAngle = (1 - Math.pow(1 - u, 3)) * TAU; }
+    else if (this.spinT > 0) this.spinAngle += dt * (6 + this.spinT * 12);
     else if (this.spinAngle) this.spinAngle = 0;
+    this._dizzy(time);
     m.body.rotation.y = this.yawVis + this.spinAngle;
     this.leanVis = damp(this.leanVis, this.steerNow * 0.1 * speedFrac + this.driftDir * 0.1, 8, dt);
     m.body.rotation.z = this.leanVis;
@@ -526,13 +617,26 @@ export class Kart {
       sh.material.uniforms.uOpacity.value = this.shieldT < 2 ? 0.45 + 0.55 * Math.abs(Math.sin(time * 12)) : 1;
     }
     const sd = m.shadow, air = clamp(this.y - this.prevG, 0, 6);
-    sd.position.set(this.x, this.prevG + 0.06, this.z);
+    const hv = this.hovNow || 0;
+    sd.position.set(this.x, this.prevG - hv + 0.06, this.z);
+    if (this.glow) { this.glow.position.y = -Math.max(0, this.y - this.prevG) - hv + 0.12; this.glow.material.opacity = 0.55 + 0.25 * Math.sin(time * 9 + this.playerIndex); }
     sd.rotation.set(-this.pitch, this.dir, this.roll, 'YXZ');
     const k = 1 - air * 0.1, sv = this.scaleVis;
     sd.scale.set(2.6 * k * sv, 1, (m.len + 1.2) * k * sv);
     sd.material.opacity = 0.4 * k;
     this._look(time);
     this.anim.update(dt, time, this);
+  }
+
+  // Stars circling over the head while dizzy after a crash.
+  _dizzy(time) {
+    if (this.dizzyT <= 0) { if (this.dizzy) this.dizzy.visible = false; return; }
+    if (!this.dizzy) { this.dizzy = dizzyStars(); this.model.root.add(this.dizzy); }
+    const d = this.dizzy, grow = Math.min(1, (this.crashD + 0.9 - this.dizzyT) * 6), fade = Math.min(1, this.dizzyT * 3);
+    d.visible = true;
+    d.position.set(0, this.model.topY + 0.25 + Math.sin(time * 6) * 0.06, 0);
+    d.rotation.set(Math.sin(time * 3) * 0.15, time * 6, 0);
+    d.scale.setScalar(Math.max(0.01, grow * fade));
   }
 
   // See-through ghost and rainbow star: both need materials of their own, because the
@@ -571,6 +675,8 @@ export class Kart {
   dispose() {
     if (this._own) this._giveMats();
     this.anim.dispose();
+    if (this.dizzy) this.model.root.remove(this.dizzy);
+    if (this.glow) { this.model.root.remove(this.glow); this.glow.geometry.dispose(); this.glow.material.dispose(); }
     this.world.scene.remove(this.model.root, this.model.shadow);
     disposeRacerModel(this.model);
   }

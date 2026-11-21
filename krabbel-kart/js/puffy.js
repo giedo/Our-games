@@ -75,6 +75,33 @@ function bleedTexture(src) {
   return { canvas: c, avg: [ar, ag, ab] };
 }
 
+// Wheels in a side-view vehicle drawing: the parts of the outline that reach down to the ground line.
+// Returns [{ x, y, r }] in pixels (centre and radius), at most four, or [] when the bottom is flat.
+export function findWheels(mask, w, h) {
+  const bottom = new Int32Array(w).fill(-1);
+  let ground = -1;
+  for (let x = 0; x < w; x++) {
+    for (let y = h - 1; y >= 0; y--) if (mask[y * w + x]) { bottom[x] = y; break; }
+    if (bottom[x] > ground) ground = bottom[x];
+  }
+  if (ground < 0) return [];
+  const near = ground - Math.max(2, h * 0.05), gap = Math.max(1, Math.round(w * 0.012));
+  const runs = [];
+  let start = -1, last = -1;
+  for (let x = 0; x <= w; x++) {
+    const on = x < w && bottom[x] >= near;
+    if (on) { if (start < 0) start = x; last = x; }
+    else if (start >= 0 && x - last > gap) { runs.push([start, last]); start = -1; }
+  }
+  if (start >= 0) runs.push([start, last]);
+  const wide = runs.filter(([a, b]) => b - a + 1 >= w * 0.04);
+  if (!wide.length || wide.some(([a, b]) => b - a + 1 > w * 0.55)) return []; // a flat bottom (boat, sled): no wheels
+  return wide.sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, 4).map(([a, b]) => {
+    const r = Math.min(h * 0.35, Math.max(h * 0.06, (b - a + 1) * 0.62));
+    return { x: (a + b) / 2, y: ground - r, r };
+  });
+}
+
 /**
  * @param {HTMLCanvasElement} cut  RGBA cut-out (transparent background)
  * @param {object} o  { mode:'pillow'|'slab', grid, puff, maxT, halfW, bevel, rimFrac }
@@ -134,10 +161,33 @@ export function buildPuffy(cut, o) {
   const R = slab ? (o.bevel || 0.035) : Math.max(dmax * 0.95, 0.01);
   const T = slab ? o.halfW : Math.min((o.puff || 0.8) * R, o.maxT || 0.2);
   const rimFrac = slab ? (o.rimFrac || 0.8) : 0;
-  const thick = (dn) => {
-    const t = Math.min(dn / R, 1);
-    const dome = Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t)));
-    return T * (rimFrac + (1 - rimFrac) * dome);
+  const domeOf = (dn, r) => { const t = Math.min(dn / r, 1); return Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t))); };
+  // Vehicles: wheels found in the drawing become wide tyres that stick out, the body between them
+  // is rounded like a pillow (o.round = body bevel), so the car looks round from behind too.
+  const wheels = slab && o.wheels ? findWheels(mask, w, h) : [];
+  const RB = slab && o.round ? Math.max(o.round, R) : R;
+  const bodyW = wheels.length ? (o.bodyW || 0.9) : 1, wheelW = o.wheelW || 1.2;
+  const wheelAt = (px, py) => {
+    let k = 0;
+    for (const wh of wheels) {
+      const d = Math.hypot(px - wh.x, py - wh.y);
+      const t = Math.min(1, Math.max(0, (wh.r * 1.06 - d) / (wh.r * 0.2)));
+      if (t > k) k = t;
+    }
+    return k * k * (3 - 2 * k);
+  };
+  const thick = (dn, px, py) => {
+    if (!slab) return T * domeOf(dn, R);
+    const body = T * bodyW * (rimFrac + (1 - rimFrac) * domeOf(dn, RB));
+    if (!wheels.length) return body;
+    const k = wheelAt(px, py);
+    return k ? body + (T * wheelW * (0.82 + 0.18 * domeOf(dn, R)) - body) * k : body;
+  };
+  const rimZ = (px, py) => {
+    if (!slab) return 0;
+    const body = T * bodyW * rimFrac;
+    const k = wheels.length ? wheelAt(px, py) : 0;
+    return body + (T * wheelW * 0.82 - body) * k;
   };
 
   const pos = [], uv = [], colr = [];
@@ -153,7 +203,7 @@ export function buildPuffy(cut, o) {
   const corner = (i, j) => {
     const k = j * nx + i;
     if (cornerId[k] < 0) {
-      const px = (i - 1) * cs, py = (j - 1) * cs, z = thick(D[k]);
+      const px = (i - 1) * cs, py = (j - 1) * cs, z = thick(D[k], px, py);
       cornerId[k] = addVert(px, py, z);
       addVert(px, py, -z);
     }
@@ -170,7 +220,7 @@ export function buildPuffy(cut, o) {
       const fa = F[a], fb = F[b];
       const t = Math.max(0.02, Math.min(0.98, (iso - fa) / (fb - fa || 1e-6)));
       const px = ((i0 - 1) + (i1 - i0) * t) * cs, py = ((j0 - 1) + (j1 - j0) * t) * cs;
-      const z = T * rimFrac;
+      const z = rimZ(px, py);
       id = addVert(px, py, z);
       if (slab) addVert(px, py, -z);
       rimPts.push(id, px, py);
@@ -266,5 +316,5 @@ export function buildPuffy(cut, o) {
   };
 
   const texture = canvasTexture(bled.canvas);
-  return { geometry, texture, wn: w * u, hn: h * u, top, thickness: T };
+  return { geometry, texture, wn: w * u, hn: h * u, top, thickness: T, wheels: wheels.map((wh) => ({ x: wh.x * u, y: (h - wh.y) * u, r: wh.r * u })) };
 }

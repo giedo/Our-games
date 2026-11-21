@@ -6,13 +6,16 @@
 ## What is in it
 
 - **Your drawings become 3D racers.** Take a photo of a drawing on paper (or draw on the screen). The game removes the paper, and turns the drawing into a puffy 3D driver or a chunky 3D vehicle that you can pick like any other racer.
-- **Nine worlds**: Tulip Valley (windmills and flower fields), Sunset Canyon, Coconut Bay (beaches around a volcano), Aurora Peaks (snow under the northern lights), and five more: a candy land, a storybook, a plum orchard, a wonky town and a neon night city.
+- **Eleven worlds**: Tulip Valley (windmills and flower fields), Sunset Canyon, Coconut Bay (beaches around a volcano), Aurora Peaks (snow under the northern lights), and seven more: a candy land, a storybook, a plum orchard, a wonky town, a neon night city, **Yarn Valley** (everything made of tufted wool: rainbow-striped hills, pom-pom trees, doll's houses, patchwork sails) and **Zero-G Galaxy** (a glowing road floating through space with low gravity and hovering karts, so every bump and ramp becomes a long floaty jump).
+- **Rounder racers**: vehicles get a rounded body and the wheels found in the drawing become tyres that stick out; drivers are blown up fuller. See `docs/3D-ONDERZOEK.md` (Dutch) for what else is possible.
 - **8 racers per race**, 3 laps. Computer racers also use your other drawings, so the kids' characters race each other.
 - **Game modes**: Race, Time Trial (with a ghost of your best lap), Explore (find 10 golden stickers, no racing), Knockout (the last karts drop out at each gate) and Grand Prix (three cups of three races each, points, standings and a podium ceremony). Battle modes on a round arena: Balloon Battle, Star Scramble and Capture the Flag (red against blue). Pick them on the mode screen; more can be plugged in (see `docs/DESIGN.md`).
 - **Age setting**: "4 to 6" (gentle: five simple modes, soft obstacles and items, no reading needed, a steering help button on the track screen) or "7 to 10" (all modes and items), chosen on the players screen.
 - **1 or 2 players** on one screen (split screen); the battle modes also have teams.
 - **Items**: 22 power-ups in all, from the turbo crayon, paint puddle, paper plane and bubble shield to comet chalk, ink blot, boomerang ruler, sparkler, star magnet and more, plus gold stars on the road to collect. Boost pads on the road.
-- **Obstacles**: rolling balls, waddling critters, cones, toy traffic, bouncers, ramps and (7 to 10 only) slippery patches, sweepers and poppers. Computer racers steer around them.
+- **Obstacles**: rolling balls, waddling critters, cones, toy traffic, bouncers, ramps and (7 to 10 only) slippery patches, sweepers and poppers. Drive into one and you crash: the kart turns a full circle, stars circle over the driver's head, a crash sound plays and the kart stops for a moment. Computer racers steer around them.
+- **Driving backwards**: hold Brake (keyboard: down) to reverse. In the battle arenas reversing is faster and touch players get a "Back" button. While you drive backwards a rear-view screen appears at the top.
+- **Throw backwards**: hold down (Brake, S, arrow down, stick down) while pressing the item button, or on a tablet swipe down on the item button. Works for the paper plane, bouncy ball, glitter bomb, freeze pop, sparkler and boomerang.
 - **Trick jumps**: drive off a ramp and tap Drift in the air (7 to 10) for a trick and a landing boost.
 - **Characters move**: drivers cheer, throw, lean over, duck for a boost and celebrate, based on their own personality.
 - **Drifting**: hold drift in a corner, the sparks change colour, let go for a boost.
@@ -25,13 +28,13 @@
 
 | | Steer | Gas | Brake | Drift | Use item |
 | --- | --- | --- | --- | --- | --- |
-| Touch | left/right pad | automatic | Brake button | Drift button | tap the item |
+| Touch | left/right pad | automatic | Brake button (battle: Back) | Drift button | tap the item, swipe down = throw backwards |
 | Keyboard, 1 player | arrows or A/D | up or W | down or S | Space | Shift, E or Enter |
 | Keyboard, player 1 of 2 | A/D | W | S | left Shift | E |
 | Keyboard, player 2 of 2 | arrows | up | down | / or right Shift | Enter |
 | Gamepad | stick or d-pad | A or right trigger | B or left trigger | shoulder buttons | X or Y |
 
-Esc or P pauses. **Settings > Steering help** keeps very young racers on the road.
+Throw backwards: hold down/brake and press the item button. Esc or P pauses. **Settings > Steering help** keeps very young racers on the road.
 Secret: press the gas between "2" and "GO" for a rocket start (keyboard and gamepad).
 
 ## Tips for drawings

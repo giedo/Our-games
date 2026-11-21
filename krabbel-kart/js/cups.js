@@ -5,14 +5,15 @@ import { TRACKS } from './tracks.js';
 import { addStrings } from './i18n.js';
 
 addStrings({
-  en: { cups: { crayon: 'Crayon Cup', paint: 'Paint Cup', glitter: 'Glitter Cup' }, cupRaces: 'races', cupHint: 'Points in every race, podium at the end.', cupBest: 'Best' },
-  nl: { cups: { crayon: 'Krijtjesbeker', paint: 'Verfbeker', glitter: 'Glitterbeker' }, cupRaces: 'races', cupHint: 'Punten per race, podium aan het eind.', cupBest: 'Beste' },
+  en: { cups: { crayon: 'Crayon Cup', paint: 'Paint Cup', glitter: 'Glitter Cup', yarn: 'Yarn & Stars Cup' }, cupRaces: 'races', cupHint: 'Points in every race, podium at the end.', cupBest: 'Best' },
+  nl: { cups: { crayon: 'Krijtjesbeker', paint: 'Verfbeker', glitter: 'Glitterbeker', yarn: 'Wol-en-sterrenbeker' }, cupRaces: 'races', cupHint: 'Punten per race, podium aan het eind.', cupBest: 'Beste' },
 });
 
 const PLAN = [
   { id: 'crayon', color: '#ff6b4a', planned: ['meadow', 'island', 'candy'], fallback: ['meadow', 'island', 'canyon', 'snow'] },
   { id: 'paint', color: '#3fb8ff', planned: ['canyon', 'story', 'plum'], fallback: ['canyon', 'meadow', 'island', 'snow'] },
   { id: 'glitter', color: '#c06bff', planned: ['snow', 'wonky', 'neon'], fallback: ['snow', 'canyon', 'meadow', 'island'] },
+  { id: 'yarn', color: '#ff8fb0', planned: ['wool', 'plum', 'space'], fallback: ['meadow', 'canyon', 'island', 'snow'] },
 ];
 
 const known = (id) => TRACKS.some((x) => x.id === id);

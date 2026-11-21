@@ -177,6 +177,10 @@ export class World {
     this.theme = makeTheme(this.themeId, def.seed, this.track.bounds);
     const pack = packById(this.themeId);
     this.packSkins = (pack && pack.skins) || {}; // obstacle looks supplied by the world pack
+    // Physics a pack may change (also for its arena variant): gravity in m/s2, hover height in metres
+    // (karts float above the road on a glow, see Kart).
+    this.gravity = (pack && pack.gravity) || 30;
+    this.hover = (pack && pack.hover) || 0;
     this.scene = new THREE.Scene();
     this.rnd = mulberry32(def.seed * 977 + 5);
     this.noise = makeNoise(def.seed + 7).noise;

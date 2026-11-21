@@ -18,6 +18,21 @@ class ChaseCam {
     this.cam = new THREE.PerspectiveCamera(62, 1, 0.3, 4000);
     this.dir = kart.dir; this.y = kart.y + 3.3; this.fov = 62; this.orbit = 0; this.shake = 0;
     this.look = new THREE.Vector3();
+    // Rear-view camera, shown in a little mirror screen while the kart drives backwards.
+    this.mirrorCam = new THREE.PerspectiveCamera(50, 3, 0.3, 500);
+    this.mirror = false; this.mirrorLook = new THREE.Vector3();
+  }
+
+  _updateMirror(race) {
+    const k = this.kart;
+    const live = race.state === 'racing' && !k.finished && !k.out;
+    if (!live || k.speed > 0.6) this.mirror = false;
+    else if (k.speed < -1.2) this.mirror = true;
+    if (!this.mirror) return;
+    const fx = Math.sin(k.dir), fz = Math.cos(k.dir), m = this.mirrorCam;
+    m.position.set(k.x - fx * 1.7, k.y + 2.1, k.z - fz * 1.7);
+    this.mirrorLook.set(k.x - fx * 22, k.y + 0.6, k.z - fz * 22);
+    m.lookAt(this.mirrorLook);
   }
 
   update(dt, race) {
@@ -55,6 +70,7 @@ class ChaseCam {
     if (this.world.waterLevel !== undefined && p.y < this.world.waterLevel + 1) p.y = this.world.waterLevel + 1;
     if (Math.abs(cam.fov - this.fov) > 0.05) { cam.fov = this.fov; cam.updateProjectionMatrix(); }
     cam.lookAt(this.look);
+    this._updateMirror(race);
   }
 }
 
@@ -103,7 +119,7 @@ export class Race {
   sfx(name, kart) {
     // Only sounds that involve a player are played (keeps the mix calm).
     if (kart && !kart.human) {
-      if (name !== 'spin' && name !== 'splat') return;
+      if (name !== 'spin' && name !== 'splat' && name !== 'crash') return;
       const h = this.humans[0];
       const d = Math.hypot(kart.x - h.x, kart.z - h.z);
       if (d > 40) return;
@@ -116,6 +132,13 @@ export class Race {
   kartAhead(kart) {
     let best = null;
     for (const k of this.karts) if (!k.finished && !k.out && k.place === kart.place - 1) best = k;
+    return best;
+  }
+
+  // The kart one place behind (for items thrown backwards).
+  kartBehind(kart) {
+    let best = null;
+    for (const k of this.karts) if (!k.finished && !k.out && k.place === kart.place + 1) best = k;
     return best;
   }
 
@@ -204,7 +227,7 @@ export class Race {
         if (k.human && k.finished) { k.speedFactor = 0.78; ctl.item = false; }
         else if (this.state === 'racing' && this.stateT < (k.startDelay || 0) && this.time < 1) ctl.gas = 0;
       }
-      if (ctl.item && this.state === 'racing') this.items.use(k);
+      if (ctl.item && this.state === 'racing') this.items.use(k, !!ctl.back);
       k.gasNow = ctl.gas; // the engine sound listens to the pedal
       k.update(dt, ctl);
     }
