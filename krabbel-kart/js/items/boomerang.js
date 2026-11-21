@@ -60,6 +60,7 @@ class Ruler extends Shot {
 
 registerItem({
   id: 'boomerang',
+  aim: true,
   ages: ['big'],
   uses: 2,
   icon: '<svg viewBox="0 0 64 64"><g transform="rotate(-12 32 32)"><path d="M8 6h16l2 28h30v16H8z" fill="#ffd21f" stroke="#2a2433" stroke-width="3" stroke-linejoin="round"/><path d="M8 14h6M8 22h9M8 30h6M8 38h9M16 50v-6M26 50v-9M36 50v-6M46 50v-9" stroke="#2a2433" stroke-width="3" stroke-linecap="round"/></g><path d="M40 12c10 2 16 10 14 20" fill="none" stroke="#4fb8ff" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 7"/><path d="M50 30l4 6 4-7z" fill="#4fb8ff" stroke="#2a2433" stroke-width="2" stroke-linejoin="round"/></svg>',

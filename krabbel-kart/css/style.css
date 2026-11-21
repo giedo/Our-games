@@ -419,3 +419,16 @@ body.portrait.touch:not(.portrait-ok) #rotate-hint { display: grid; }
 @media (prefers-reduced-motion: reduce) {
   .hud-item.ready, .hud-msg.show, .hud-msg.long.show, .hud-wrong.show { animation: none; }
 }
+
+/* Rear-view mirror: the frame is transparent, the game draws the rear view into it while reversing. */
+.hud-mirror { position: absolute; left: 50%; top: calc(58px + clamp(64px, 12vh, 92px) + 64px + var(--safe-t)); width: min(34%, 340px); aspect-ratio: 3 / 1; transform: translateX(-50%) scale(.6); opacity: 0; border: 5px solid var(--ink); border-radius: 10px; box-shadow: 0 0 0 4px #fff, 0 6px 0 4px var(--ink); pointer-events: none; transition: opacity .15s, transform .2s cubic-bezier(.2, 1.6, .4, 1); }
+.hud-mirror.show { opacity: 1; transform: translateX(-50%) scale(1); }
+.hud-mirror span { position: absolute; left: 50%; bottom: -30px; transform: translateX(-50%); white-space: nowrap; font-size: 15px; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; }
+.hud.split .hud-mirror { width: 46%; }
+body.touch .hud-mirror { top: calc(62px + var(--safe-t)); }
+body.touch .touch-brake.rev { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; background: rgba(255, 190, 80, .92); }
+.touch-brake.rev b { font-size: 1.5em; }
+/* Touch: a little arrow under the item button says "swipe down to throw backwards". */
+body.touch .hud-item.ready::after { content: '▼'; position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%); font-size: 16px; color: #fff; -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill; opacity: .85; }
+.hud-item.back { animation: throwback .35s ease-out; }
+@keyframes throwback { 40% { transform: translateY(14px) scale(.9); } }

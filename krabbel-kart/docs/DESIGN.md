@@ -97,6 +97,8 @@ Placed per world through `obstacles: [{ kind, at, lat, skin, ... }]` where `at` 
 | `popper` | Pops out of the road on a rhythm and tosses the kart. | no |
 | `traffic` | Slow toy vehicles that drive along the road. | yes (bump only) |
 
+Update: touching a roller, critter, cone, sweeper, popper or toy vehicle now calls `kart.crash()`: one full turn on the spot, dizzy stars over the head, the `crash` sound, and the kart comes to a stop. For the little age group it is shorter (1.0 s instead of 1.3 s) and never costs balloons or stars (`mode.onHit` is not called).
+
 ## Character animation
 
 Racers are puffy drawings, so animation is transform-based: squash, stretch, hop, twirl, wiggle, lean, plus little emote particles (stars, hearts, sweat drops, sparkles). Gestures: `select` (picked in the menu), `idle`, `throw`, `win`, `lose`, `hit`, `overtake`, `boost`.
@@ -344,6 +346,11 @@ Hooks and fields that appeared after the foundation. All have working defaults; 
 - **Obstacles** (`js/obstacles.js`): `race.obstacles.advise(kart)` (where a computer racer should steer to avoid obstacles), `race.obstacles.list`, kinds in `js/obstacles/kinds.js` (`KINDS`, `HARD` = kinds not built for the little group), skins in `js/obstacles/looks.js`.
 - **Kart** (`js/kart.js`): `lift` (ramp surface height under the kart) and `liftPitch` (set by obstacles), `driftHeld` (the drift button is down; a tap in the air after a ramp starts a trick, big group only), `gesture(name)` (character animation: select, idle, throw, win, lose, hit, overtake, boost, trick).
 - **Track definitions** (`js/tracks.js`): arena fields `limitPad` (how far past the road edge karts may go; arenas run up to the fence) and `itemLats` (lateral positions of item rows).
+- **Crash** (`js/kart.js`): `kart.crash({ cause, by })`, used by the obstacles (see above). `crashT`, `dizzyT`.
+- **Reverse and mirror**: `mode.reverseMax` (m/s, default 8, battle 15) and `mode.reverseButton` (touch shows "Back" instead of "Brake"). `ChaseCam.mirrorCam` / `.mirror` (on while reversing); `main.js` draws it into the HUD frame `hud.mirrorEl`.
+- **Throwing backwards**: `input.read()` returns `back` (down or swipe down held with the item press), `items.use(kart, back)`. Items with `aim: true` are then used with `kart.aimBack = true` and `kart.dir` turned round for the duration of `use()`; `race.kartBehind(kart)` is the target for homing items.
+- **World physics**: a world pack may set `gravity` (m/s², default 30) and `hover` (metres; karts float on a glow). Zero-G Galaxy (`space`) uses 11 and 0.45.
+- **Racer shape** (`js/puffy.js`): `findWheels()` and the slab options `round`, `wheels`, `bodyW`, `wheelW`. Research notes: `docs/3D-ONDERZOEK.md`.
 - **Strings**: never use a plain string key that a feature also uses as a group. `t('items')` is the group of item names, so the race option label is `itemsOpt`.
 
 ### Pitfalls

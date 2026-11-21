@@ -102,8 +102,7 @@ class Roller extends Obs {
           sys.sfx('obs-pop', k);
         } else if (!k.isImmune() && k.hitCool <= 0) {
           b.sq = 1;
-          if (sys.big) { k.hit({ cause: 'roller' }); sys.push(k, sg, 4); sys.sfx('obs-thud', k); }
-          else { k.hit({ soft: true, cause: 'roller' }); k.launch(7); sys.push(k, sg, 4); sys.sfx('obs-boing', k); }
+          if (k.crash({ cause: 'roller' })) { sys.push(k, sg, 3); sys.sfx('obs-thud', k); }
         }
       }
     }
@@ -175,7 +174,7 @@ class Crosser extends Obs {
         fling(c, -sg * rnd(4, 7) * (big ? 1.7 : 1), k.speed * (big ? 0.6 : 0.3), big ? rnd(10, 14) : rnd(5.5, 7.5), big ? rnd(8, 14) : rnd(2, 4));
         c.cool = 1; c.bl = c.lat;
         sys.sfx('obs-squeak', k);
-        if (!k.isImmune() && k.hitCool <= 0) { k.hit({ soft: true, cause: 'crosser' }); sys.push(k, sg, sys.big ? 5 : 3); }
+        if (!k.isImmune() && k.hitCool <= 0 && k.crash({ cause: 'crosser' })) sys.push(k, sg, 2);
       }
     }
     if (!this.vis) return;
@@ -310,7 +309,7 @@ class Cones extends Obs {
         c.back = 0; hitAny = true;
       }
       if (hitAny) {
-        if (!strong(k) && !k.isImmune() && k.hitCool <= 0) k.hit({ soft: true, cause: 'cones' });
+        if (!strong(k) && !k.isImmune() && k.hitCool <= 0) k.crash({ cause: 'cones' });
         sys.sfx('obs-pop', k);
         sys.puff(this.vis, k.x + Math.sin(k.dir) * 1.5, k.y + 0.6, k.z + Math.cos(k.dir) * 1.5, [0xff5a7a, 0xffffff, 0xffd84a], 8, 5);
       }
@@ -397,7 +396,7 @@ class Spinner extends Obs {
       if (qx * qx + qz * qz > (1.15 + (t > 0.9 ? 0.3 : 0)) ** 2) continue;
       // Push the way the arm swings.
       const tr = sys.tr, i = k.idx, lx = s, lz = -c;
-      k.hit({ cause: 'spinner' });
+      k.crash({ cause: 'spinner' });
       k.bump(tr.rx[i] * lx + tr.tx[i] * lz, tr.rz[i] * lx + tr.tz[i] * lz, 9);
       sys.sfx('obs-thud', k);
     }
@@ -448,7 +447,7 @@ class Popper extends Obs {
         const dk = this.along(k), dl = k.lat - this.lat;
         if (Math.abs(dk) > 3 || dl * dl + dk * dk > 2.2 * 2.2 || sys.air(k) > 1.0) continue;
         this.cool[ki] = time + 1.5;
-        k.launch(15); k.hit({ cause: 'popper' });
+        k.launch(15); k.crash({ cause: 'popper' });
         sys.sfx('obs-boing', k);
       }
     }
@@ -517,8 +516,8 @@ class Traffic extends Obs {
         if (penZ < penL * 1.6 && dz <= 0) { k.x -= tr.tx[ix] * penZ; k.z -= tr.tz[ix] * penZ; } else { k.x += tr.rx[ix] * sg * penL; k.z += tr.rz[ix] * sg * penL; }
         if (this.cool[ki] < time) {
           this.cool[ki] = time + 0.7;
-          k.hit({ soft: true, cause: 'traffic' }); k.speed = Math.max(this.v, k.speed * (sys.big ? 0.5 : 0.7));
-          sys.push(k, sg, sys.big ? 10 : 6);
+          k.crash({ cause: 'traffic' });
+          sys.push(k, sg, sys.big ? 6 : 4);
           sys.sfx('obs-honk', k);
         }
       }

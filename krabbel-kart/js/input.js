@@ -54,7 +54,7 @@ export class Input {
   // Call once per frame after all players have been read.
   endFrame() {
     this.pressed.clear();
-    for (const t of this.touch) t.itemTap = false;
+    for (const t of this.touch) { t.itemTap = false; t.itemBack = false; }
   }
 
   _pad(index) {
@@ -75,12 +75,13 @@ export class Input {
     let gas = this._key(map, 'gas') ? 1 : 0, brake = this._key(map, 'brake') ? 1 : 0;
     let drift = this._key(map, 'drift'), item = this._key(map, 'item');
     if (left || right || gas || brake || drift || item) this.device[player] = 'keys';
-    let analog = 0;
+    let analog = 0, stickDown = false;
     const pad = this._pad(player);
     if (pad) {
       const b = (i) => pad.buttons[i] && (pad.buttons[i].pressed || pad.buttons[i].value > 0.4);
       const ax = Math.abs(pad.axes[0]) > 0.18 ? pad.axes[0] : 0;
       if (ax) analog = ax;
+      stickDown = pad.axes[1] > 0.55 || b(13);
       if (b(14)) left = true;
       if (b(15)) right = true;
       const g = Math.max(b(0) ? 1 : 0, pad.buttons[7] ? pad.buttons[7].value : 0);
@@ -103,7 +104,9 @@ export class Input {
     this.steer[player] = Math.abs(target - s) < rate * dt ? target : s + Math.sign(target - s) * rate * dt;
     const pressed = item && !this.prevItem[player];
     this.prevItem[player] = item;
-    return { steer: clamp(this.steer[player], -1, 1), gas, brake, drift, item: pressed, any: left || right || gas || brake || drift || item };
+    // Down (brake, stick down) together with the item button, or a swipe down on the touch item button: throw it backwards.
+    const back = pressed && (brake > 0.5 || stickDown || !!t.itemBack);
+    return { steer: clamp(this.steer[player], -1, 1), gas, brake, drift, item: pressed, back, any: left || right || gas || brake || drift || item };
   }
 
   // True once when a "confirm" style button is pressed (used to skip intros).

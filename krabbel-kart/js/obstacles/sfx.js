@@ -25,3 +25,14 @@ registerSfx('obs-honk', (a, t, v, d) => {
   a._tone(d, 'square', 330, 320, t, 0.18, 0.12 * v);
   a._tone(d, 'square', 415, 405, t, 0.18, 0.1 * v);
 });
+// Crash into an obstacle: a bang, a rattle of bits, then a dizzy "tweet-tweet" while the kart turns round.
+registerSfx('crash', (a, t, v, d) => {
+  a._noise(d, 'lowpass', 2400, 180, t, 0.28, 0.55 * v);
+  a._tone(d, 'sine', 160, 40, t, 0.3, 0.7 * v);
+  a._tone(d, 'square', 520, 180, t + 0.02, 0.12, 0.08 * v);
+  a._noise(d, 'highpass', 4000, 6000, t + 0.08, 0.18, 0.16 * v);
+  for (let i = 0; i < 3; i++) {
+    a._tone(d, 'sine', 1900, 2500, t + 0.35 + i * 0.22, 0.08, 0.12 * v);
+    a._tone(d, 'sine', 2500, 1700, t + 0.45 + i * 0.22, 0.09, 0.1 * v);
+  }
+});

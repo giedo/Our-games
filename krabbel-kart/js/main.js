@@ -410,7 +410,31 @@ class Game {
       if (this.race) this.race.particles.setScale(scale);
       if (this.ceremony) this.ceremony.particles.setScale(scale);
       r.render(w.scene, cam);
+      if (this.race) this._renderMirror(i, scale);
     }
+  }
+
+  // The little rear-view screen of player i: drawn into the rectangle of its HUD frame.
+  _renderMirror(i, scale) {
+    const cc = this.race.cams[i], hud = this.race.huds[i];
+    if (!cc.mirror || !hud || !hud.mirrorEl) return;
+    const box = hud.mirrorEl.getBoundingClientRect(), cv = this.canvas.getBoundingClientRect();
+    if (box.width < 8 || box.height < 8 || !cv.width) return;
+    const sx = this.vw / cv.width, sy = this.vh / cv.height, b = 5; // stay inside the frame's border
+    const x = (box.left - cv.left + b) * sx, w = (box.width - 2 * b) * sx;
+    const h = (box.height - 2 * b) * sy, y = this.vh - (box.bottom - cv.top - b) * sy;
+    const r = this.renderer, cam = cc.mirrorCam;
+    if (Math.abs(cam.aspect - w / h) > 1e-3) { cam.aspect = w / h; cam.updateProjectionMatrix(); }
+    r.setScissorTest(true);
+    r.setViewport(x, y, w, h); r.setScissor(x, y, w, h);
+    const su = r.shadowMap.autoUpdate;
+    r.shadowMap.autoUpdate = false; // reuse the shadows of the main view
+    const ms = scale * (h / this.vh);
+    for (const u of this.world.pointScaleUniforms) u.value = ms;
+    this.race.particles.setScale(ms);
+    r.render(this.world.scene, cam);
+    r.shadowMap.autoUpdate = su;
+    r.setScissorTest(this.race.cams.length > 1);
   }
 }
 

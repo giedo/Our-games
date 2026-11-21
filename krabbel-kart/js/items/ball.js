@@ -42,6 +42,7 @@ class Ball extends Shot {
 
 registerItem({
   id: 'ball',
+  aim: true,
   ages: ['big'],
   icon: '<svg viewBox="0 0 64 64"><path d="M6 54c6-26 14-26 20-6" fill="none" stroke="#2a2433" stroke-width="3" stroke-dasharray="3 6" stroke-linecap="round"/><circle cx="38" cy="30" r="22" fill="#ff4b4b" stroke="#2a2433" stroke-width="3"/><path d="M20 20c8 6 24 4 36 0v6c-12 6-28 6-36 0z" fill="#ffd21f"/><path d="M17 36c10 6 28 8 42 0l-1 6c-14 8-32 6-41 0z" fill="#4fb8ff"/><circle cx="38" cy="30" r="22" fill="none" stroke="#2a2433" stroke-width="3"/><ellipse cx="28" cy="18" rx="5" ry="3" fill="#fff" opacity=".7" transform="rotate(-30 28 18)"/></svg>',
   weight: (k, f) => (k.place === 1 ? 0.5 : 1 + 1.2 * f),

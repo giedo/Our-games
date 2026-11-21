@@ -45,6 +45,8 @@ export class BattleMode extends Mode {
 
   lapCount() { return Infinity; }
   get allowRubberBand() { return false; }
+  get reverseMax() { return 15; }
+  get reverseButton() { return true; }
   onLap() {}
   onFinish() {}
   get live() { return this.race.state === 'racing' && !this.over; }

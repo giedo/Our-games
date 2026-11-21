@@ -19,6 +19,10 @@ import wonky from './wonky.js';
 import plum from './plum.js';
 //
 import neon from './neon.js';
+//
+import wool from './wool.js';
+//
+import space from './space.js';
 
 export const WORLD_PACKS = [
   candy,
@@ -30,6 +34,10 @@ export const WORLD_PACKS = [
   plum,
   //
   neon,
+  //
+  wool,
+  //
+  space,
 ];
 
 export function packById(id) {

@@ -49,6 +49,7 @@ class Spark extends Shot {
 
 registerItem({
   id: 'sparks',
+  aim: true,
   ages: ['big'],
   uses: 5,
   icon: '<svg viewBox="0 0 64 64"><path d="M14 58L38 26" stroke="#2a2433" stroke-width="9" stroke-linecap="round"/><path d="M14 58L38 26" stroke="#c9ced8" stroke-width="4" stroke-linecap="round"/><path d="M40 22l4-14M40 22l-12-6M40 22l14 2M40 22l10 12M40 22l-8 12" stroke="#2a2433" stroke-width="8" stroke-linecap="round"/><path d="M40 22l4-14M40 22l-12-6M40 22l14 2M40 22l10 12M40 22l-8 12" stroke="#ffe14a" stroke-width="4" stroke-linecap="round"/><circle cx="40" cy="22" r="6" fill="#fff" stroke="#2a2433" stroke-width="3"/><circle cx="52" cy="8" r="3" fill="#ff5cf0"/><circle cx="22" cy="10" r="3" fill="#4fe9ff"/></svg>',

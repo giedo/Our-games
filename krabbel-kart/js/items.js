@@ -21,10 +21,12 @@ export const SYSTEM_HOOKS = [];
 //   aiWants(kart, ctx) -> bool        should a computer racer use it now? ctx = { kmax, hold, race } (default true),
 //   uses: 1                           how many presses before the item is gone (multi-use items),
 //   held: 0                           seconds the item stays usable after the first press (unlimited presses),
+//   aim: false                        a thrown or shot item that can also go backwards (down + item button):
+//                                     use() then runs with kart.aimBack = true and kart.dir turned round,
 // }
 export function registerItem(def) {
   if (!def || !def.id || typeof def.use !== 'function') throw new Error('registerItem needs { id, use }');
-  const d = Object.assign({ icon: '', ages: ['little', 'big'], weight: () => 1, aiWants: () => true, uses: 1, held: 0 }, def);
+  const d = Object.assign({ icon: '', ages: ['little', 'big'], weight: () => 1, aiWants: () => true, uses: 1, held: 0, aim: false }, def);
   const i = ITEM_DEFS.findIndex((x) => x.id === d.id);
   if (i >= 0) ITEM_DEFS[i] = d; else ITEM_DEFS.push(d);
   return d;
@@ -107,8 +109,8 @@ export class ItemSystem {
     this.race.sfx('itemReady', kart);
   }
 
-  // The player (or computer racer) pressed the item button.
-  use(kart) {
+  // The player (or computer racer) pressed the item button. back: thrown backwards (only items with aim).
+  use(kart, back = false) {
     if (!kart.item || kart.rollT > 0 || kart.out) return;
     const d = itemById(kart.item);
     if (!d) { kart.item = null; return; }
@@ -116,7 +118,14 @@ export class ItemSystem {
     // Use up first, so use() may hand the kart a new item; undo when it declines.
     if (d.held) { if (!(kart.itemT > 0)) kart.itemT = d.held; }
     else if (--kart.itemUses <= 0) kart.item = null;
-    if (d.use(this, kart) === false) { kart.item = was.item; kart.itemUses = was.uses; kart.itemT = was.t; return; }
+    // Throwing backwards: the item's own code simply sees a kart that faces the other way for a moment.
+    const flip = back && d.aim;
+    const dir0 = kart.dir;
+    if (flip) { kart.aimBack = true; kart.dir = dir0 + Math.PI; }
+    let ok;
+    try { ok = d.use(this, kart); } finally { if (flip) { kart.dir = dir0; kart.aimBack = false; } }
+    if (ok === false) { kart.item = was.item; kart.itemUses = was.uses; kart.itemT = was.t; return; }
+    if (flip && kart.human) { const h = this.race.huds[kart.playerIndex]; if (h) h.backFlash(); }
     if (kart.item) kart.aiItemT = 0.5 + Math.random() * 1.5; // still holding something: computer racers wait a moment
     kart.gesture('throw');
   }
@@ -309,6 +318,7 @@ registerItem({
   id: 'plane',
   icon: '<svg viewBox="0 0 64 64"><path d="M4 30l56-20-18 44-12-16z" fill="#ffffff" stroke="#2a2433" stroke-width="3" stroke-linejoin="round"/><path d="M60 10L30 38l-2 14 8-8" fill="#d6e6f5" stroke="#2a2433" stroke-width="3" stroke-linejoin="round"/><path d="M4 30l26 8" stroke="#2a2433" stroke-width="3"/></svg>',
   weight: (k, f) => (k.place === 1 ? 0.25 : 1 + 3 * f),
+  aim: true,
   use(sys, kart) {
     sys.add(new Plane(sys, kart));
     sys.race.sfx('throw', kart);
@@ -404,8 +414,8 @@ class Plane {
     this.kind = 'plane';
     this.mesh = sys.spawnMesh(sys.res('planeGeo', planeGeometry), sys.res('planeMat', () => new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, emissive: 0x777777 })));
     this.mesh.scale.setScalar(1.3);
-    this.arena = !!sys.world.def.arena; this.dirS = 1;
-    this.owner = kart; this.target = this.arena ? nearestRival(sys, kart) : sys.race.kartAhead(kart);
+    this.arena = !!sys.world.def.arena; this.dirS = kart.aimBack ? -1 : 1;
+    this.owner = kart; this.target = this.arena ? nearestRival(sys, kart) : kart.aimBack ? sys.race.kartBehind(kart) : sys.race.kartAhead(kart);
     if (this.arena && this.target) this.dirS = arcTo(tr, kart.s, this.target.s) < 0 ? -1 : 1;
     this.s = kart.s + (3 / tr.seg) * this.dirS; this.lat = kart.lat;
     this.life = 7;

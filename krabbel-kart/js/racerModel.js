@@ -16,10 +16,11 @@ export function getPuffy(sticker, kind) {
   let p, scale;
   if (kind === 'vehicle') {
     scale = Math.min(VEH_LEN / wn, VEH_MAXH / hn);
-    p = buildPuffy(c, { mode: 'slab', grid: 60, halfW: VEH_HALFW / scale, bevel: 0.11 / scale, rimFrac: 0.76 });
+    // Rounded body (round: pillow bevel) with tyres that stick out (wheels), see js/puffy.js.
+    p = buildPuffy(c, { mode: 'slab', grid: 60, halfW: VEH_HALFW / scale, bevel: 0.11 / scale, rimFrac: 0.38, round: 0.5 / scale, wheels: true, bodyW: 0.92, wheelW: 1.2 });
   } else {
     scale = Math.min(DRV_H / hn, DRV_MAXW / wn);
-    p = buildPuffy(c, { mode: 'pillow', grid: 60, puff: 0.9, maxT: 0.42 / scale });
+    p = buildPuffy(c, { mode: 'pillow', grid: 60, puff: 1.1, maxT: 0.58 / scale }); // fuller, rounder drivers
   }
   if (p) {
     p.scale = scale;
